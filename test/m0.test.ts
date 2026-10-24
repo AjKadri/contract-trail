@@ -10,18 +10,21 @@ import {
   sqlLiteral,
 } from "../scripts/zetaris/sql.js";
 
-describe("M0 data manifest", () => {
-  it("contains the six replayable-case tables", () => {
+describe("data manifest", () => {
+  it("contains the eight procurement and CPI tables", () => {
     expect(DATASET_TABLES.map((entry) => `${entry.database}.${entry.table}`)).toEqual([
       "bpp.bpp_awards",
       "bpp.bpp_awards_suppliers",
+      "bpp.bpp_contracts",
+      "bpp.bpp_contracts_items",
       "states.osun_awards",
       "states.osun_awards_suppliers",
       "states.oyo_main",
       "states.oyo_tender_items",
+      "states.world_bank_cpi",
     ]);
-    expect(TABLES_BY_DATABASE.bpp).toHaveLength(2);
-    expect(TABLES_BY_DATABASE.states).toHaveLength(4);
+    expect(TABLES_BY_DATABASE.bpp).toHaveLength(4);
+    expect(TABLES_BY_DATABASE.states).toHaveLength(5);
   });
 
   it("keeps the three M0 headline counts explicit", () => {
@@ -39,6 +42,12 @@ describe("M0 generated SQL", () => {
     expect(buildTableLoadSql(DATASET_TABLES[0], ["id", "value_amount"])).toContain(
       "COPY \"bpp_awards\" FROM '/data/csv_64/full/awards.csv'",
     );
+    expect(buildTableLoadSql(DATASET_TABLES[2], ["id", "dateSigned"])).toContain(
+      "COPY \"bpp_contracts\" FROM '/data/csv_64/full/contracts.csv'",
+    );
+    expect(buildTableLoadSql(DATASET_TABLES[3], ["id", "quantity"])).toContain(
+      "COPY \"bpp_contracts_items\" FROM '/data/csv_64/full/contracts_items.csv'",
+    );
   });
 });
 
@@ -53,7 +62,8 @@ describe("M0 Zetaris registration SQL", () => {
     expect(create).toContain("password 'p''ass'");
     expect(buildRegisterTablesSql("bpp_pg")).toBe("REGISTER DATASOURCE TABLES FROM bpp_pg");
     expect(buildShowTablesSql("bpp_pg")).toBe("SHOW DATASOURCE TABLES bpp_pg");
-    expect(EXPECTED_ZETARIS_TABLES.states_pg).toHaveLength(4);
+    expect(EXPECTED_ZETARIS_TABLES.bpp_pg).toHaveLength(4);
+    expect(EXPECTED_ZETARIS_TABLES.states_pg).toHaveLength(5);
     expect(sqlLiteral("O'Reilly")).toBe("'O''Reilly'");
   });
 });

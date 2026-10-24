@@ -18,8 +18,8 @@ export const DATASOURCES: readonly DatasourceConfig[] = [
 ];
 
 export const EXPECTED_ZETARIS_TABLES = {
-  bpp_pg: ["bpp_awards", "bpp_awards_suppliers"],
-  states_pg: ["osun_awards", "osun_awards_suppliers", "oyo_main", "oyo_tender_items"],
+  bpp_pg: ["bpp_awards", "bpp_awards_suppliers", "bpp_contracts", "bpp_contracts_items"],
+  states_pg: ["osun_awards", "osun_awards_suppliers", "oyo_main", "oyo_tender_items", "world_bank_cpi"],
 } as const;
 
 export function sqlLiteral(value: string): string {

@@ -20,6 +20,16 @@ export const DATASET_TABLES: readonly DatasetTable[] = [
     sourcePath: "csv_64/full/awards_suppliers.csv",
   },
   {
+    database: "bpp",
+    table: "bpp_contracts",
+    sourcePath: "csv_64/full/contracts.csv",
+  },
+  {
+    database: "bpp",
+    table: "bpp_contracts_items",
+    sourcePath: "csv_64/full/contracts_items.csv",
+  },
+  {
     database: "states",
     table: "osun_awards",
     sourcePath: "csv_118/full/awards.csv",
@@ -41,6 +51,11 @@ export const DATASET_TABLES: readonly DatasetTable[] = [
     table: "oyo_tender_items",
     sourcePath: "csv_106/full/tender_items.csv",
   },
+  {
+    database: "states",
+    table: "world_bank_cpi",
+    sourcePath: "cpi/world_bank_fp_cpi_totl_nga.csv",
+  },
 ];
 
 export const TABLES_BY_DATABASE = {
@@ -53,3 +68,6 @@ export const HEADLINE_COUNTS = {
   osun_awards: 492,
   oyo_main: 304,
 } as const;
+
+export const WORLD_BANK_CPI_SOURCE_URL =
+  "https://api.worldbank.org/v2/country/NGA/indicator/FP.CPI.TOTL?format=json&per_page=100";

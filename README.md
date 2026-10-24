@@ -27,8 +27,29 @@ npm test
 ```
 
 `npm run ingest` downloads missing OCDS archives into the ignored `spike/data/`
-directory, loads the six M0 tables, and prints their row counts. The headline
-counts are BPP awards 17,431, Osun awards 492, and Oyo main 330.
+directory, loads every table in the manifest, and prints their row counts. The
+headline counts are BPP awards 17,431, Osun awards 492, and Oyo main 304.
+
+## M1 integrations
+
+The ingestion manifest also loads BPP contracts and contract items for the
+price-per-book and twin-award rules. `npm run check:zetaris` verifies the
+cross-publisher supplier join through Zetaris. `npm run check:nightshift`
+verifies both pinned Nemotron lanes and prints the returned model IDs.
+
+`npm run check:cpi` first attempts a World Bank `FP.CPI.TOTL` REST table through
+Zetaris. If the local Zetaris build rejects that REST registration, it verifies
+the cited World Bank snapshot in `states_pg.world_bank_cpi` through Zetaris and
+prints the fallback status.
+
+H-MEM is implemented in `src/engines/hmem/` from the upstream Meterless H-MEM
+reference. The upstream source is Apache-2.0 licensed. The checkout is kept in
+the ignored `vendor/meterless/` directory and can be recreated with:
+
+```sh
+git clone --depth 1 https://github.com/Meterless/Meterless.git vendor/meterless
+npm run conformance:hmem
+```
 
 ## Data sources
 - Open Contracting Data Registry (Open Contracting Partnership): Nigeria Bureau of Public Procurement, Osun State, Oyo State. Licence notes to be confirmed per publisher.

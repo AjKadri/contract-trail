@@ -1,15 +1,22 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { DATASET_ARCHIVES, DATASET_TABLES, TABLES_BY_DATABASE } from "./manifest.js";
+import {
+  DATASET_ARCHIVES,
+  DATASET_TABLES,
+  TABLES_BY_DATABASE,
+  WORLD_BANK_CPI_SOURCE_URL,
+} from "./manifest.js";
 import { buildDatabaseLoadSql } from "./sql.js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const DATA_ROOT = join(ROOT, "spike", "data");
 const COMPOSE_FILE = join(ROOT, "infra", "data-compose.yml");
 const DOWNLOAD_BASE = "https://data.open-contracting.org/en/publication";
+const CPI_JSON_PATH = join(DATA_ROOT, "cpi", "world_bank_fp_cpi_totl_nga.json");
+const CPI_CSV_PATH = join(DATA_ROOT, "cpi", "world_bank_fp_cpi_totl_nga.csv");
 
 function run(command: string, args: readonly string[], options: { capture?: boolean } = {}): string {
   const result = execFileSync(command, [...args], {
@@ -29,8 +36,63 @@ function requiredFilesExist(): boolean {
   return DATASET_TABLES.every((table) => existsSync(join(DATA_ROOT, table.sourcePath)));
 }
 
+function csvCell(value: string): string {
+  return `"${value.replaceAll('"', '""')}"`;
+}
+
+function ensureCpiData(): void {
+  if (existsSync(CPI_CSV_PATH)) {
+    return;
+  }
+
+  mkdirSync(dirname(CPI_CSV_PATH), { recursive: true });
+  console.log("[ingest] downloading World Bank Nigeria CPI");
+  run("curl", [
+    "--fail",
+    "--location",
+    "--silent",
+    "--show-error",
+    "--output",
+    CPI_JSON_PATH,
+    WORLD_BANK_CPI_SOURCE_URL,
+  ], { capture: false });
+
+  const payload = JSON.parse(readFileSync(CPI_JSON_PATH, "utf8")) as unknown;
+  if (!Array.isArray(payload) || !Array.isArray(payload[1])) {
+    throw new Error("World Bank CPI response did not contain an observations array");
+  }
+
+  const rows = payload[1].map((entry: unknown) => {
+    const observation = entry as {
+      countryiso3code?: unknown;
+      date?: unknown;
+      value?: unknown;
+      indicator?: { id?: unknown; value?: unknown };
+    };
+    return [
+      String(observation.countryiso3code ?? "NGA"),
+      String(observation.date ?? ""),
+      observation.value === null || observation.value === undefined ? "" : String(observation.value),
+      String(observation.indicator?.id ?? "FP.CPI.TOTL"),
+      String(observation.indicator?.value ?? "Consumer price index (2010 = 100)"),
+    ].map(csvCell).join(",");
+  });
+
+  if (rows.length === 0) {
+    throw new Error("World Bank CPI response contained no observations");
+  }
+
+  writeFileSync(
+    CPI_CSV_PATH,
+    ["countryiso3code,date,value,indicator_id,indicator_name", ...rows, ""].join("\n"),
+    "utf8",
+  );
+  console.log(`[ingest] prepared states.world_bank_cpi rows=${rows.length}`);
+}
+
 function ensureData(): void {
   mkdirSync(DATA_ROOT, { recursive: true });
+  ensureCpiData();
   if (requiredFilesExist()) {
     console.log(`[ingest] using existing data under ${DATA_ROOT}`);
     return;

@@ -10,7 +10,11 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "ingest": "tsx scripts/ingest/index.ts",
-    "zetaris:register": "tsx scripts/zetaris/register.ts"
+    "zetaris:register": "tsx scripts/zetaris/register.ts",
+    "check:zetaris": "tsx scripts/zetaris/check.ts",
+    "check:nightshift": "tsx scripts/zetaris/check-nightshift.ts",
+    "check:cpi": "tsx scripts/zetaris/check-cpi.ts",
+    "conformance:hmem": "HMEM_IMPL=$PWD/src/engines/hmem/index.ts npx tsx vendor/meterless/engines/hmem/conformance/runner.ts"
   },
   "dependencies": {
     "dotenv": "^17.2.3"
