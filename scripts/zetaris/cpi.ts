@@ -10,10 +10,10 @@ export function buildCreateCpiRestDatabaseSql(): string {
 
 export function buildRegisterCpiRestTableSql(): string {
   return [
-    `REGISTER REST DATASOURCE TABLE ${CPI_REST_TABLE} FROM ${CPI_REST_DATASOURCE}`,
-    "SCHEMA (countryiso3code String, date String, value Double)",
-    "OPTIONS",
-    `(endpoint \"${WORLD_BANK_CPI_SOURCE_URL}\", method \"GET\", requesttype \"URLENCODED\")`,
+    `CREATE LIGHTNING REST TABLE ${CPI_REST_TABLE} FROM ${CPI_REST_DATASOURCE}`,
+    `REQUEST (endpoint \"${WORLD_BANK_CPI_SOURCE_URL}\", method \"GET\", response_type \"JSON\")`,
+    "HEADER ()",
+    "BODY ()",
   ].join(" ");
 }
 

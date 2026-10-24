@@ -9,6 +9,8 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
+    "db:up": "docker compose --env-file .env -f infra/data-compose.yml up -d",
+    "ask": "tsx src/cli/ask.ts",
     "ingest": "tsx scripts/ingest/index.ts",
     "zetaris:register": "tsx scripts/zetaris/register.ts",
     "check:zetaris": "tsx scripts/zetaris/check.ts",
