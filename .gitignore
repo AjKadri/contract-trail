@@ -1,0 +1,18 @@
+.env
+.venv/
+zetaris-platform/
+zetaris-platform.zip
+research/*.pdf
+
+# Local idea briefs and internal collaboration notes
+CODEX_IDEAS_BRIEF.md
+research/IDEAS-codex.md
+.agent/
+spike/data/
+
+# Internal research and strategy notes (not for the public repo)
+research/
+.DS_Store
+vendor/
+node_modules/
+dist/
