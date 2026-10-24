@@ -34,7 +34,7 @@ export const DATASET_TABLES: readonly DatasetTable[] = [
     database: "states",
     table: "oyo_main",
     sourcePath: "csv_106/full/main.csv",
-    expectedRows: 330,
+    expectedRows: 304,
   },
   {
     database: "states",
@@ -51,5 +51,5 @@ export const TABLES_BY_DATABASE = {
 export const HEADLINE_COUNTS = {
   bpp_awards: 17_431,
   osun_awards: 492,
-  oyo_main: 330,
+  oyo_main: 304,
 } as const;

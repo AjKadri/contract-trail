@@ -17,7 +17,8 @@ function run(command: string, args: readonly string[], options: { capture?: bool
     encoding: "utf8",
     stdio: options.capture === false ? "inherit" : ["ignore", "pipe", "pipe"],
   });
-  return result.trim();
+  // execFileSync returns null when stdio is inherited
+  return (result ?? "").toString().trim();
 }
 
 function archivePath(publication: number): string {
@@ -97,7 +98,7 @@ function ensureDatabase(database: string): void {
 }
 
 function runCompose(args: readonly string[], options: { capture?: boolean } = {}): string {
-  return run("docker", ["compose", "-f", COMPOSE_FILE, ...args], options);
+  return run("docker", ["compose", "--env-file", join(ROOT, ".env"), "-f", COMPOSE_FILE, ...args], options);
 }
 
 function loadDatabase(database: "bpp" | "states"): void {
@@ -140,8 +141,30 @@ function printCounts(): void {
   }
 }
 
+
+function waitForPostgres(timeoutMs = 90_000): void {
+  const started = Date.now();
+  let ok = 0;
+  while (Date.now() - started < timeoutMs) {
+    try {
+      const out = runCompose(["exec", "-T", "ct-pg", "psql", "-U", "postgres", "-d", "postgres", "-At", "-c", "SELECT 1;"]);
+      if (out === "1") {
+        ok += 1;
+        // Require two successes 2s apart: the image's first-start init server answers briefly, then restarts.
+        if (ok >= 2) return;
+      }
+    } catch {
+      ok = 0;
+    }
+    execFileSync("sleep", ["2"]);
+  }
+  throw new Error("ct-pg did not accept connections within 90s; check `docker compose -f infra/data-compose.yml logs ct-pg`");
+}
+
 function main(): void {
   ensureData();
+  console.log("[ingest] waiting for ct-pg");
+  waitForPostgres();
   ensureDatabase("bpp");
   ensureDatabase("states");
   loadDatabase("bpp");
