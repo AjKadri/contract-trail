@@ -28,7 +28,7 @@ async function callNightshift(requestedModel: string): Promise<string> {
       model: requestedModel,
       messages: [{ role: "user", content: "Reply with the single word: ready" }],
       temperature: 0,
-      max_tokens: 8,
+      max_tokens: 1024,
     }),
     signal: AbortSignal.timeout(60_000),
   });
