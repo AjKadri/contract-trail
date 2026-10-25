@@ -1,0 +1,3056 @@
+{
+  "version": 2,
+  "mode": "LIVE",
+  "question": "Are the exercise-book contracts in federal constituency projects priced fairly compared with what states pay?",
+  "startedAt": "2026-10-25T12:40:21.817Z",
+  "plan": {
+    "plan": [
+      {
+        "step": 1,
+        "name": "search_federal_contracts",
+        "description": "Retrieve federal constituency project exercise-book contracts",
+        "tool": "searchFederalBookContracts",
+        "parameters": {
+          "year_range": "2020-2024",
+          "spec_filters": [
+            "leaves",
+            "gsm",
+            "cover_type"
+          ]
+        },
+        "outputs": [
+          "contract_id",
+          "constituency",
+          "state",
+          "award_year",
+          "supplier",
+          "quantity",
+          "total_value",
+          "spec_summary"
+        ]
+      },
+      {
+        "step": 2,
+        "name": "search_oyo_contracts",
+        "description": "Retrieve Oyo state exercise-book procurement contracts",
+        "tool": "searchOyoBookContracts",
+        "parameters": {
+          "year_range": "2020-2024",
+          "spec_filters": [
+            "leaves",
+            "gsm",
+            "cover_type"
+          ]
+        },
+        "outputs": [
+          "contract_id",
+          "award_year",
+          "supplier",
+          "quantity",
+          "total_value",
+          "spec_summary"
+        ]
+      },
+      {
+        "step": 3,
+        "name": "get_federal_items",
+        "description": "Fetch detailed line items for federal contracts",
+        "tool": "getFederalBookContractItems",
+        "parameters": {
+          "contract_ids": "from_step_1"
+        },
+        "outputs": [
+          "contract_id",
+          "item_id",
+          "leaves",
+          "gsm",
+          "cover_type",
+          "size",
+          "binding",
+          "unit_price",
+          "quantity"
+        ]
+      },
+      {
+        "step": 4,
+        "name": "get_oyo_items",
+        "description": "Fetch detailed line items for Oyo contracts",
+        "tool": "searchOyoBookContracts",
+        "parameters": {
+          "contract_ids": "from_step_2",
+          "include_items": true
+        },
+        "outputs": [
+          "contract_id",
+          "item_id",
+          "leaves",
+          "gsm",
+          "cover_type",
+          "size",
+          "binding",
+          "unit_price",
+          "quantity"
+        ]
+      },
+      {
+        "step": 5,
+        "name": "standardize_specs",
+        "description": "Normalize specifications into comparable tiers",
+        "rule": "Create spec_key = leaves|gsm|cover_type|size|binding; group by spec_key"
+      },
+      {
+        "step": 6,
+        "name": "cpi_adjustment",
+        "description": "Adjust all unit prices to constant 2024 NGN",
+        "tool": "getNigeriaCpi",
+        "parameters": {
+          "years": "2020-2024"
+        },
+        "calculation": "real_price_2024 = nominal_price * (CPI_2024 / CPI_award_year)"
+      },
+      {
+        "step": 7,
+        "name": "deduplicate",
+        "description": "Remove duplicate contract lines",
+        "keys": [
+          "contract_id",
+          "item_id",
+          "supplier",
+          "spec_key",
+          "quantity",
+          "unit_price"
+        ],
+        "rule": "Keep first; log duplicates"
+      },
+      {
+        "step": 8,
+        "name": "twin_award_check",
+        "description": "Flag twin awards: same spec, year, constituency/state, similar quantity/price to different suppliers",
+        "match_fields": [
+          "jurisdiction",
+          "award_year",
+          "spec_key"
+        ],
+        "tolerances": {
+          "quantity_pct": 5,
+          "price_pct": 10
+        },
+        "output": "twin_group_id, twin_flag"
+      },
+      {
+        "step": 9,
+        "name": "benchmark_comparison",
+        "description": "Compare federal vs Oyo median real prices by spec_key and year",
+        "group_by": [
+          "spec_key",
+          "award_year",
+          "jurisdiction"
+        ],
+        "metrics": [
+          "median_real_price_2024",
+          "p25",
+          "p75",
+          "count"
+        ],
+        "output": "price_gap_pct, fairness_flag"
+      },
+      {
+        "step": 10,
+        "name": "leaf_matched_followup",
+        "description": "Run leaf-matched comparison for closest spec pairs across jurisdictions",
+        "tool": "getLeafMatchedComparison",
+        "parameters": {
+          "federal_items": "from_step_3",
+          "oyo_items": "from_step_4",
+          "match_on": [
+            "leaves",
+            "gsm",
+            "cover_type"
+          ],
+          "tolerance": "exact"
+        },
+        "output": "matched_pairs, price_diff_pct, notes"
+      },
+      {
+        "step": 11,
+        "name": "cross_publisher_supplier_check",
+        "description": "Identify suppliers appearing in both federal and Oyo awards",
+        "tool": "getCrossPublisherSuppliers",
+        "parameters": {
+          "federal_suppliers": "from_step_1",
+          "oyo_suppliers": "from_step_2"
+        },
+        "output": "common_suppliers, contract_counts, value_share"
+      }
+    ],
+    "tools": [
+      "searchFederalBookContracts",
+      "getFederalBookContractItems",
+      "getLeafMatchedComparison",
+      "searchOyoBookContracts",
+      "getNigeriaCpi",
+      "getCrossPublisherSuppliers"
+    ]
+  },
+  "plannerChosenTools": [
+    "searchFederalBookContracts",
+    "getFederalBookContractItems",
+    "getLeafMatchedComparison",
+    "searchOyoBookContracts",
+    "getNigeriaCpi",
+    "getCrossPublisherSuppliers"
+  ],
+  "selectedTools": [
+    "searchFederalBookContracts",
+    "getFederalBookContractItems",
+    "searchOyoBookContracts",
+    "getNigeriaCpi",
+    "getCrossPublisherSuppliers"
+  ],
+  "toolSelectionNotes": [
+    "planner chose searchFederalBookContracts, getFederalBookContractItems, getLeafMatchedComparison, searchOyoBookContracts, getNigeriaCpi, getCrossPublisherSuppliers",
+    "data-agent chose searchFederalBookContracts, getFederalBookContractItems, searchOyoBookContracts, getNigeriaCpi, getCrossPublisherSuppliers"
+  ],
+  "toolCalls": [
+    {
+      "tool": "searchFederalBookContracts",
+      "params": {},
+      "sql": "SELECT c.id, c.main_ocid, c.main_id, c.title, c.dateSigned, c.value_amount, c.value_currency FROM bpp_pg.bpp_contracts c WHERE lower(c.title) LIKE '%exercise book%' OR lower(c.title) LIKE '%notebook%' OR lower(c.title) LIKE '%note book%' ORDER BY c.dateSigned DESC, c.id DESC",
+      "limit": 500,
+      "startedAt": "2026-10-25T12:41:30.969Z",
+      "durationMs": 2080,
+      "rowCount": 21,
+      "resultRows": [
+        [
+          "15558",
+          "ocds-gyl66f-539001003-002448",
+          "ocds-gyl66f-539001003-002448-2025-02-11T15:02:00Z",
+          "PRINTING AND SUPPLY OF CUSTOMIZED NOTEBOOKS TO  SELECTED PRIMARY AND SECONDARY SCHOOLS IN ALOR AND  SELECTED COMMUNITIES IN IDEMILI SOUTH LGA OF ANAMB",
+          "2024-11-06T00:00:00Z",
+          "148314250",
+          "NGN"
+        ],
+        [
+          "16869",
+          "ocds-gyl66f-539001003-002067",
+          "ocds-gyl66f-539001003-002067-2025-02-13T10:16:00Z",
+          "SUPPLY AND DISTRIBUTION OF EXERCISE BOOKS TO SELECTED SCHOOLS IN BAGUDO/SURU FEDERAL CONSTITUENCY, KEBBI STATE",
+          "2024-10-28T00:00:00Z",
+          "97467315.2",
+          "NGN"
+        ],
+        [
+          "17018",
+          "ocds-gyl66f-539001003-002244",
+          "ocds-gyl66f-539001003-002244-2025-02-13T10:30:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED  SCHOOLS IN TUDUN/S",
+          "2024-10-15T00:00:00Z",
+          "19688875",
+          "NGN"
+        ],
+        [
+          "15613",
+          "ocds-gyl66f-539001003-002381",
+          "ocds-gyl66f-539001003-002381-2025-02-12T10:50:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED  SCHOOLS IN GALADIMAWA II",
+          "2024-10-15T00:00:00Z",
+          "19753375",
+          "NGN"
+        ],
+        [
+          "16955",
+          "ocds-gyl66f-539001003-002160",
+          "ocds-gyl66f-539001003-002160-2025-02-13T10:20:00Z",
+          "SUPPLY AND DISTRIBUTION OF EXERCISE BOOKS TO SELECTED SCHOOLS IN OREDO FEDERAL CONSTITUENCY, EDO STATE",
+          "2024-09-12T00:00:00Z",
+          "34182750",
+          "NGN"
+        ],
+        [
+          "17047",
+          "ocds-gyl66f-539001003-002278",
+          "ocds-gyl66f-539001003-002278-2025-02-13T10:31:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS FOR SCHOOLS IN IKEJA, LAGOS",
+          "2024-09-02T00:00:00Z",
+          "46965870",
+          "NGN"
+        ],
+        [
+          "18179",
+          "ocds-gyl66f-232005001-001937",
+          "ocds-gyl66f-232005001-001937-2025-02-24T12:49:00Z",
+          "Procurement of Notebook Thinkpad T14",
+          "2023-12-27T00:00:00Z",
+          "98742702",
+          "NGN"
+        ],
+        [
+          "18205",
+          "ocds-gyl66f-232005001-001922",
+          "ocds-gyl66f-232005001-001922-2025-02-24T12:50:00Z",
+          "Procurement of Notebook Thinkpad X1 Carbon gen 10 and 15.6 inch top load cases",
+          "2023-12-21T00:00:00Z",
+          "37394358.75",
+          "NGN"
+        ],
+        [
+          "18202",
+          "ocds-gyl66f-232005001-001919",
+          "ocds-gyl66f-232005001-001919-2025-02-24T12:50:00Z",
+          "Contract for Procurement of Notebook Thinkpad Detachable Gen 12",
+          "2023-12-15T00:00:00Z",
+          "36741470.4",
+          "NGN"
+        ],
+        [
+          "18195",
+          "ocds-gyl66f-232005001-001934",
+          "ocds-gyl66f-232005001-001934-2025-02-24T12:49:00Z",
+          "Contract for thProcurement of Notebook Thinkpad P16 Gen 1 Lenovo Nano and Thinkpad USB and Thunderbolte ",
+          "2023-12-12T00:00:00Z",
+          "39129398",
+          "NGN"
+        ],
+        [
+          "18226",
+          "ocds-gyl66f-232005001-001904",
+          "ocds-gyl66f-232005001-001904-2025-02-24T12:51:00Z",
+          "Contract for the Procurement of Notebook thinkpad T14 Gen 3 (Part No. 2IAJSIPEOO) and 15.6 inch topload cases)",
+          "2023-09-18T00:00:00Z",
+          "96891593.63",
+          "NGN"
+        ],
+        [
+          "16817",
+          "ocds-gyl66f-539001003-001999",
+          "ocds-gyl66f-539001003-001999-2025-02-13T10:08:00Z",
+          "SUPPLY OF CUSTOMIZED NOTEBOOKS AND INSTRUCTIONAL MATERIALS IN AKINYELE/LAGELU FED. CONST. ",
+          "2023-09-13T00:00:00Z",
+          "26657504.7",
+          "NGN"
+        ],
+        [
+          "15707",
+          "ocds-gyl66f-539001003-001848",
+          "ocds-gyl66f-539001003-001848-2025-02-12T13:58:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED SCHOOLS IN KUBAU LOCAL GOVERNMENT",
+          "2023-08-16T00:00:00Z",
+          "28065250",
+          "NGN"
+        ],
+        [
+          "15689",
+          "ocds-gyl66f-539001003-001825",
+          "ocds-gyl66f-539001003-001825-2025-02-12T13:57:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS FOR SCHOOLS IN GABASAWA COMMUNITIES",
+          "2023-08-14T00:00:00Z",
+          "24902536.38",
+          "NGN"
+        ],
+        [
+          "18185",
+          "ocds-gyl66f-232005001-001944",
+          "ocds-gyl66f-232005001-001944-2025-02-24T12:49:00Z",
+          "Contract for the Procurement of Notebook Thinkpad T14 Gen3 and 15.6 Inch Topload Case",
+          "2023-04-17T00:00:00Z",
+          "21531470.62",
+          "NGN"
+        ],
+        [
+          "5927",
+          "ocds-gyl66f-517001001-000651",
+          "ocds-gyl66f-517001001-000651-2024-03-13T11:19:00Z",
+          "Supply of 40 and 60 leaves customise Exercise books into schools , Katsina State North senatorial district",
+          "2022-09-27T00:00:00Z",
+          "29412000",
+          "NGN"
+        ],
+        [
+          "5856",
+          "ocds-gyl66f-517001001-000538",
+          "ocds-gyl66f-517001001-000538-2024-03-13T11:14:00Z",
+          "Supply of 60 and 40 leaves Customized Exercise books to schools in katsina north senatorial district, katsina state.",
+          "2021-12-08T00:00:00Z",
+          "30860951",
+          "NGN"
+        ],
+        [
+          "11216",
+          "ocds-gyl66f-123031011-000058",
+          "ocds-gyl66f-123031011-000058-2024-09-09T15:09:00Z",
+          "PRINTING OF CUSTOMIZED OF EXERCISE BOOKS/POSTERS",
+          "2021-06-25T00:00:00Z",
+          "2100000",
+          "NGN"
+        ],
+        [
+          "18367",
+          "ocds-gyl66f-232005001-000122",
+          "ocds-gyl66f-232005001-000122-2025-02-24T14:04:00Z",
+          "CONTRACT FOR THE REPLENISHMENT OF CENTRAL STORE ITEMS (XEROX A4 PAPER AND HARD COVER NOTEBOOK",
+          "2021-05-31T00:00:00Z",
+          "2112584.62",
+          "NGN"
+        ],
+        [
+          "3780",
+          "ocds-gyl66f-156006003-000528",
+          "ocds-gyl66f-156006003-000528-2021-08-31T18:11:00Z",
+          " supply of five (5) Probook 450 G5 Note book PC, five (5) Executive Carrier Bags and forty (40) Samsung Tab S3 9.7inch (wi-Fi) for the Federal Charact",
+          "2021-04-13T00:00:00Z",
+          "12913437.5",
+          "NGN"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN"
+        ]
+      ],
+      "status": "ok",
+      "requestedBy": "data-agent"
+    },
+    {
+      "tool": "getFederalBookContractItems",
+      "params": {},
+      "sql": "SELECT c.id, c.main_ocid, c.main_id, c.title, c.dateSigned, c.value_amount, c.value_currency, i.id, i.quantity, i.description, i.contracts_id FROM bpp_pg.bpp_contracts c JOIN bpp_pg.bpp_contracts_items i ON i.main_ocid = c.main_ocid AND i.main_id = c.main_id AND i.contracts_id = c.id WHERE (lower(c.title) LIKE '%exercise book%' OR lower(c.title) LIKE '%notebook%' OR lower(c.title) LIKE '%note book%') ORDER BY c.dateSigned DESC, c.id DESC, i.id",
+      "limit": 2000,
+      "startedAt": "2026-10-25T12:41:33.049Z",
+      "durationMs": 5044,
+      "rowCount": 58,
+      "resultRows": [
+        [
+          "15558",
+          "ocds-gyl66f-539001003-002448",
+          "ocds-gyl66f-539001003-002448-2025-02-11T15:02:00Z",
+          "PRINTING AND SUPPLY OF CUSTOMIZED NOTEBOOKS TO  SELECTED PRIMARY AND SECONDARY SCHOOLS IN ALOR AND  SELECTED COMMUNITIES IN IDEMILI SOUTH LGA OF ANAMB",
+          "2024-11-06T00:00:00Z",
+          "148314250",
+          "NGN",
+          "83318",
+          "6000",
+          "CUSTOMISED 20 LEAVES EXERCISE BOOKS",
+          "15558"
+        ],
+        [
+          "15558",
+          "ocds-gyl66f-539001003-002448",
+          "ocds-gyl66f-539001003-002448-2025-02-11T15:02:00Z",
+          "PRINTING AND SUPPLY OF CUSTOMIZED NOTEBOOKS TO  SELECTED PRIMARY AND SECONDARY SCHOOLS IN ALOR AND  SELECTED COMMUNITIES IN IDEMILI SOUTH LGA OF ANAMB",
+          "2024-11-06T00:00:00Z",
+          "148314250",
+          "NGN",
+          "83319",
+          "24000",
+          "CUSTOMISED 40 LEAVES EXERCISE BOOKS",
+          "15558"
+        ],
+        [
+          "15558",
+          "ocds-gyl66f-539001003-002448",
+          "ocds-gyl66f-539001003-002448-2025-02-11T15:02:00Z",
+          "PRINTING AND SUPPLY OF CUSTOMIZED NOTEBOOKS TO  SELECTED PRIMARY AND SECONDARY SCHOOLS IN ALOR AND  SELECTED COMMUNITIES IN IDEMILI SOUTH LGA OF ANAMB",
+          "2024-11-06T00:00:00Z",
+          "148314250",
+          "NGN",
+          "83320",
+          "24000",
+          "CUSTOMISED 60 LEAVES EXERCISE BOOKS",
+          "15558"
+        ],
+        [
+          "15558",
+          "ocds-gyl66f-539001003-002448",
+          "ocds-gyl66f-539001003-002448-2025-02-11T15:02:00Z",
+          "PRINTING AND SUPPLY OF CUSTOMIZED NOTEBOOKS TO  SELECTED PRIMARY AND SECONDARY SCHOOLS IN ALOR AND  SELECTED COMMUNITIES IN IDEMILI SOUTH LGA OF ANAMB",
+          "2024-11-06T00:00:00Z",
+          "148314250",
+          "NGN",
+          "83321",
+          "20000",
+          "CUSTOMISED 80 LEAVES EXERCISE BOOKS",
+          "15558"
+        ],
+        [
+          "16869",
+          "ocds-gyl66f-539001003-002067",
+          "ocds-gyl66f-539001003-002067-2025-02-13T10:16:00Z",
+          "SUPPLY AND DISTRIBUTION OF EXERCISE BOOKS TO SELECTED SCHOOLS IN BAGUDO/SURU FEDERAL CONSTITUENCY, KEBBI STATE",
+          "2024-10-28T00:00:00Z",
+          "97467315.2",
+          "NGN",
+          "85454",
+          "25",
+          "SUPPLY OF CHAIRS AND DESKS FOR SELECTED PRIMARY AND SECONDARY SCHOOLS IN ORON/MBO/OKOBO/UDUNG UKO/URUEOFFONG ORUKO FEDERAL CONSTITUENCY, AKWA IBOM STATE",
+          "16869"
+        ],
+        [
+          "16869",
+          "ocds-gyl66f-539001003-002067",
+          "ocds-gyl66f-539001003-002067-2025-02-13T10:16:00Z",
+          "SUPPLY AND DISTRIBUTION OF EXERCISE BOOKS TO SELECTED SCHOOLS IN BAGUDO/SURU FEDERAL CONSTITUENCY, KEBBI STATE",
+          "2024-10-28T00:00:00Z",
+          "97467315.2",
+          "NGN",
+          "85455",
+          "2400",
+          "20 LEAVES EXRCISE BOOKS",
+          "16869"
+        ],
+        [
+          "16869",
+          "ocds-gyl66f-539001003-002067",
+          "ocds-gyl66f-539001003-002067-2025-02-13T10:16:00Z",
+          "SUPPLY AND DISTRIBUTION OF EXERCISE BOOKS TO SELECTED SCHOOLS IN BAGUDO/SURU FEDERAL CONSTITUENCY, KEBBI STATE",
+          "2024-10-28T00:00:00Z",
+          "97467315.2",
+          "NGN",
+          "85456",
+          "12000",
+          "40 LEAVES EXERCISE BOOKS",
+          "16869"
+        ],
+        [
+          "16869",
+          "ocds-gyl66f-539001003-002067",
+          "ocds-gyl66f-539001003-002067-2025-02-13T10:16:00Z",
+          "SUPPLY AND DISTRIBUTION OF EXERCISE BOOKS TO SELECTED SCHOOLS IN BAGUDO/SURU FEDERAL CONSTITUENCY, KEBBI STATE",
+          "2024-10-28T00:00:00Z",
+          "97467315.2",
+          "NGN",
+          "85457",
+          "18000",
+          "60 LEAVES EXERCISE BOOKS",
+          "16869"
+        ],
+        [
+          "16869",
+          "ocds-gyl66f-539001003-002067",
+          "ocds-gyl66f-539001003-002067-2025-02-13T10:16:00Z",
+          "SUPPLY AND DISTRIBUTION OF EXERCISE BOOKS TO SELECTED SCHOOLS IN BAGUDO/SURU FEDERAL CONSTITUENCY, KEBBI STATE",
+          "2024-10-28T00:00:00Z",
+          "97467315.2",
+          "NGN",
+          "85458",
+          "12960",
+          "80 LEAVES EXERCISE BOOKS",
+          "16869"
+        ],
+        [
+          "17018",
+          "ocds-gyl66f-539001003-002244",
+          "ocds-gyl66f-539001003-002244-2025-02-13T10:30:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED  SCHOOLS IN TUDUN/S",
+          "2024-10-15T00:00:00Z",
+          "19688875",
+          "NGN",
+          "86188",
+          "1200",
+          "PRINTING AND SUPPLY OF CUSTOMISED 60 LEAVES EXERCISE BOOKS",
+          "17018"
+        ],
+        [
+          "17018",
+          "ocds-gyl66f-539001003-002244",
+          "ocds-gyl66f-539001003-002244-2025-02-13T10:30:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED  SCHOOLS IN TUDUN/S",
+          "2024-10-15T00:00:00Z",
+          "19688875",
+          "NGN",
+          "86189",
+          "3500",
+          "PRINTING AND SUPPLY OF CUSTOMISED 80 LEAVES EXERCISE BOOKS",
+          "17018"
+        ],
+        [
+          "17018",
+          "ocds-gyl66f-539001003-002244",
+          "ocds-gyl66f-539001003-002244-2025-02-13T10:30:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED  SCHOOLS IN TUDUN/S",
+          "2024-10-15T00:00:00Z",
+          "19688875",
+          "NGN",
+          "86190",
+          "3500",
+          "PRINTING AND SUPPLY OF CUSTOMISED 100 LEAVES EXERCISE BOOKS",
+          "17018"
+        ],
+        [
+          "15613",
+          "ocds-gyl66f-539001003-002381",
+          "ocds-gyl66f-539001003-002381-2025-02-12T10:50:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED  SCHOOLS IN GALADIMAWA II",
+          "2024-10-15T00:00:00Z",
+          "19753375",
+          "NGN",
+          "83728",
+          "1200",
+          "CUSTOMISED 60 LEAVES EXERCISE BOOKS",
+          "15613"
+        ],
+        [
+          "15613",
+          "ocds-gyl66f-539001003-002381",
+          "ocds-gyl66f-539001003-002381-2025-02-12T10:50:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED  SCHOOLS IN GALADIMAWA II",
+          "2024-10-15T00:00:00Z",
+          "19753375",
+          "NGN",
+          "83729",
+          "3500",
+          "CUSTOMISED 80 LEAVES EXERCISE BOOKS",
+          "15613"
+        ],
+        [
+          "15613",
+          "ocds-gyl66f-539001003-002381",
+          "ocds-gyl66f-539001003-002381-2025-02-12T10:50:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED  SCHOOLS IN GALADIMAWA II",
+          "2024-10-15T00:00:00Z",
+          "19753375",
+          "NGN",
+          "83730",
+          "3500",
+          "CUSTOMISED 100 LEAVES EXERCISE BOOKS",
+          "15613"
+        ],
+        [
+          "16955",
+          "ocds-gyl66f-539001003-002160",
+          "ocds-gyl66f-539001003-002160-2025-02-13T10:20:00Z",
+          "SUPPLY AND DISTRIBUTION OF EXERCISE BOOKS TO SELECTED SCHOOLS IN OREDO FEDERAL CONSTITUENCY, EDO STATE",
+          "2024-09-12T00:00:00Z",
+          "34182750",
+          "NGN",
+          "85964",
+          "2400",
+          "20 LEAVES EXERCISE BOOKS",
+          "16955"
+        ],
+        [
+          "16955",
+          "ocds-gyl66f-539001003-002160",
+          "ocds-gyl66f-539001003-002160-2025-02-13T10:20:00Z",
+          "SUPPLY AND DISTRIBUTION OF EXERCISE BOOKS TO SELECTED SCHOOLS IN OREDO FEDERAL CONSTITUENCY, EDO STATE",
+          "2024-09-12T00:00:00Z",
+          "34182750",
+          "NGN",
+          "85965",
+          "4800",
+          "40 LEAVES EXERCISE BOOKS",
+          "16955"
+        ],
+        [
+          "16955",
+          "ocds-gyl66f-539001003-002160",
+          "ocds-gyl66f-539001003-002160-2025-02-13T10:20:00Z",
+          "SUPPLY AND DISTRIBUTION OF EXERCISE BOOKS TO SELECTED SCHOOLS IN OREDO FEDERAL CONSTITUENCY, EDO STATE",
+          "2024-09-12T00:00:00Z",
+          "34182750",
+          "NGN",
+          "85966",
+          "4800",
+          "60 LEAVES EXERCISE BOOKS",
+          "16955"
+        ],
+        [
+          "17047",
+          "ocds-gyl66f-539001003-002278",
+          "ocds-gyl66f-539001003-002278-2025-02-13T10:31:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS FOR SCHOOLS IN IKEJA, LAGOS",
+          "2024-09-02T00:00:00Z",
+          "46965870",
+          "NGN",
+          "86281",
+          "2400",
+          "20 LEAVES EXERCISE BOOKS",
+          "17047"
+        ],
+        [
+          "17047",
+          "ocds-gyl66f-539001003-002278",
+          "ocds-gyl66f-539001003-002278-2025-02-13T10:31:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS FOR SCHOOLS IN IKEJA, LAGOS",
+          "2024-09-02T00:00:00Z",
+          "46965870",
+          "NGN",
+          "86282",
+          "6480",
+          "40 LEAVES EXERCISE BOOKS",
+          "17047"
+        ],
+        [
+          "17047",
+          "ocds-gyl66f-539001003-002278",
+          "ocds-gyl66f-539001003-002278-2025-02-13T10:31:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS FOR SCHOOLS IN IKEJA, LAGOS",
+          "2024-09-02T00:00:00Z",
+          "46965870",
+          "NGN",
+          "86283",
+          "6960",
+          "60 LEAVES EXERCISE BOOKS",
+          "17047"
+        ],
+        [
+          "17047",
+          "ocds-gyl66f-539001003-002278",
+          "ocds-gyl66f-539001003-002278-2025-02-13T10:31:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS FOR SCHOOLS IN IKEJA, LAGOS",
+          "2024-09-02T00:00:00Z",
+          "46965870",
+          "NGN",
+          "86284",
+          "6960",
+          "80 LEAVES EXERCISE BOOKS",
+          "17047"
+        ],
+        [
+          "18179",
+          "ocds-gyl66f-232005001-001937",
+          "ocds-gyl66f-232005001-001937-2025-02-24T12:49:00Z",
+          "Procurement of Notebook Thinkpad T14",
+          "2023-12-27T00:00:00Z",
+          "98742702",
+          "NGN",
+          "89793",
+          "1",
+          "Procurement of Notebook Thinkpad T14",
+          "18179"
+        ],
+        [
+          "18205",
+          "ocds-gyl66f-232005001-001922",
+          "ocds-gyl66f-232005001-001922-2025-02-24T12:50:00Z",
+          "Procurement of Notebook Thinkpad X1 Carbon gen 10 and 15.6 inch top load cases",
+          "2023-12-21T00:00:00Z",
+          "37394358.75",
+          "NGN",
+          "89847",
+          "1",
+          "Procurement of Notebook Thinkpad X1 Carbon gen 10 and 15.6 inch top load cases",
+          "18205"
+        ],
+        [
+          "18202",
+          "ocds-gyl66f-232005001-001919",
+          "ocds-gyl66f-232005001-001919-2025-02-24T12:50:00Z",
+          "Contract for Procurement of Notebook Thinkpad Detachable Gen 12",
+          "2023-12-15T00:00:00Z",
+          "36741470.4",
+          "NGN",
+          "89841",
+          "1",
+          "Procurement of Notebook Thinkpad Detachable Gen 12",
+          "18202"
+        ],
+        [
+          "18195",
+          "ocds-gyl66f-232005001-001934",
+          "ocds-gyl66f-232005001-001934-2025-02-24T12:49:00Z",
+          "Contract for thProcurement of Notebook Thinkpad P16 Gen 1 Lenovo Nano and Thinkpad USB and Thunderbolte ",
+          "2023-12-12T00:00:00Z",
+          "39129398",
+          "NGN",
+          "89827",
+          "1",
+          "Procurement of Notebook Thinkpad P16 Gen 1 Lenovo Nano and Thinkpad USB and Thunderbolt",
+          "18195"
+        ],
+        [
+          "18226",
+          "ocds-gyl66f-232005001-001904",
+          "ocds-gyl66f-232005001-001904-2025-02-24T12:51:00Z",
+          "Contract for the Procurement of Notebook thinkpad T14 Gen 3 (Part No. 2IAJSIPEOO) and 15.6 inch topload cases)",
+          "2023-09-18T00:00:00Z",
+          "96891593.63",
+          "NGN",
+          "89893",
+          "45",
+          "Procurement of Notebook thinkpad T14 Gen 3 ",
+          "18226"
+        ],
+        [
+          "16817",
+          "ocds-gyl66f-539001003-001999",
+          "ocds-gyl66f-539001003-001999-2025-02-13T10:08:00Z",
+          "SUPPLY OF CUSTOMIZED NOTEBOOKS AND INSTRUCTIONAL MATERIALS IN AKINYELE/LAGELU FED. CONST. ",
+          "2023-09-13T00:00:00Z",
+          "26657504.7",
+          "NGN",
+          "85309",
+          "27000",
+          "SUPPLY OF CUSTOMIZED NOTEBOOKS AND INSTRUCTIONAL MATERIALS IN AKINYELE/LAGELU FED. CONST. ",
+          "16817"
+        ],
+        [
+          "15707",
+          "ocds-gyl66f-539001003-001848",
+          "ocds-gyl66f-539001003-001848-2025-02-12T13:58:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED SCHOOLS IN KUBAU LOCAL GOVERNMENT",
+          "2023-08-16T00:00:00Z",
+          "28065250",
+          "NGN",
+          "84006",
+          "26700",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED SCHOOLS IN KUBAU LOCAL GOVERNMENT",
+          "15707"
+        ],
+        [
+          "15689",
+          "ocds-gyl66f-539001003-001825",
+          "ocds-gyl66f-539001003-001825-2025-02-12T13:57:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS FOR SCHOOLS IN GABASAWA COMMUNITIES",
+          "2023-08-14T00:00:00Z",
+          "24902536.38",
+          "NGN",
+          "83957",
+          "23400",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS FOR SCHOOLS IN GABASAWA COMMUNITIES",
+          "15689"
+        ],
+        [
+          "18185",
+          "ocds-gyl66f-232005001-001944",
+          "ocds-gyl66f-232005001-001944-2025-02-24T12:49:00Z",
+          "Contract for the Procurement of Notebook Thinkpad T14 Gen3 and 15.6 Inch Topload Case",
+          "2023-04-17T00:00:00Z",
+          "21531470.62",
+          "NGN",
+          "89806",
+          "1",
+          "TRAINING ON INTELLIGENGENCE LED POLICING FOR EFFECTIVE CRIME PREVENTION",
+          "18185"
+        ],
+        [
+          "18185",
+          "ocds-gyl66f-232005001-001944",
+          "ocds-gyl66f-232005001-001944-2025-02-24T12:49:00Z",
+          "Contract for the Procurement of Notebook Thinkpad T14 Gen3 and 15.6 Inch Topload Case",
+          "2023-04-17T00:00:00Z",
+          "21531470.62",
+          "NGN",
+          "89807",
+          "1",
+          "Procurement of Notebook Thinkpad T14 Gen3 and 15.6 Inch Topload Case",
+          "18185"
+        ],
+        [
+          "5927",
+          "ocds-gyl66f-517001001-000651",
+          "ocds-gyl66f-517001001-000651-2024-03-13T11:19:00Z",
+          "Supply of 40 and 60 leaves customise Exercise books into schools , Katsina State North senatorial district",
+          "2022-09-27T00:00:00Z",
+          "29412000",
+          "NGN",
+          "28024",
+          "1",
+          "Supply of 40 and 60 leaves customise Exercise books into schools , Katsina State North senatorial district",
+          "5927"
+        ],
+        [
+          "5856",
+          "ocds-gyl66f-517001001-000538",
+          "ocds-gyl66f-517001001-000538-2024-03-13T11:14:00Z",
+          "Supply of 60 and 40 leaves Customized Exercise books to schools in katsina north senatorial district, katsina state.",
+          "2021-12-08T00:00:00Z",
+          "30860951",
+          "NGN",
+          "27875",
+          "1",
+          "Supply of 60 and 40 leaves Customized Exercise books to schools in katsina north senatorial district, katsina state.",
+          "5856"
+        ],
+        [
+          "11216",
+          "ocds-gyl66f-123031011-000058",
+          "ocds-gyl66f-123031011-000058-2024-09-09T15:09:00Z",
+          "PRINTING OF CUSTOMIZED OF EXERCISE BOOKS/POSTERS",
+          "2021-06-25T00:00:00Z",
+          "2100000",
+          "NGN",
+          "64486",
+          "20",
+          "MARKERS ",
+          "11216"
+        ],
+        [
+          "11216",
+          "ocds-gyl66f-123031011-000058",
+          "ocds-gyl66f-123031011-000058-2024-09-09T15:09:00Z",
+          "PRINTING OF CUSTOMIZED OF EXERCISE BOOKS/POSTERS",
+          "2021-06-25T00:00:00Z",
+          "2100000",
+          "NGN",
+          "64487",
+          "1300",
+          "CUSTOMIZED EXERCISE BOOKS (80 LEAVES) ",
+          "11216"
+        ],
+        [
+          "11216",
+          "ocds-gyl66f-123031011-000058",
+          "ocds-gyl66f-123031011-000058-2024-09-09T15:09:00Z",
+          "PRINTING OF CUSTOMIZED OF EXERCISE BOOKS/POSTERS",
+          "2021-06-25T00:00:00Z",
+          "2100000",
+          "NGN",
+          "64488",
+          "13",
+          "MEDIUM SIZE OF MAGNETIC WITE BOARD",
+          "11216"
+        ],
+        [
+          "11216",
+          "ocds-gyl66f-123031011-000058",
+          "ocds-gyl66f-123031011-000058-2024-09-09T15:09:00Z",
+          "PRINTING OF CUSTOMIZED OF EXERCISE BOOKS/POSTERS",
+          "2021-06-25T00:00:00Z",
+          "2100000",
+          "NGN",
+          "64489",
+          "1500",
+          "FLYERS",
+          "11216"
+        ],
+        [
+          "11216",
+          "ocds-gyl66f-123031011-000058",
+          "ocds-gyl66f-123031011-000058-2024-09-09T15:09:00Z",
+          "PRINTING OF CUSTOMIZED OF EXERCISE BOOKS/POSTERS",
+          "2021-06-25T00:00:00Z",
+          "2100000",
+          "NGN",
+          "64490",
+          "1200",
+          "POSTERS",
+          "11216"
+        ],
+        [
+          "11216",
+          "ocds-gyl66f-123031011-000058",
+          "ocds-gyl66f-123031011-000058-2024-09-09T15:09:00Z",
+          "PRINTING OF CUSTOMIZED OF EXERCISE BOOKS/POSTERS",
+          "2021-06-25T00:00:00Z",
+          "2100000",
+          "NGN",
+          "64491",
+          "30",
+          "CUSTOMIZED BIROS",
+          "11216"
+        ],
+        [
+          "11216",
+          "ocds-gyl66f-123031011-000058",
+          "ocds-gyl66f-123031011-000058-2024-09-09T15:09:00Z",
+          "PRINTING OF CUSTOMIZED OF EXERCISE BOOKS/POSTERS",
+          "2021-06-25T00:00:00Z",
+          "2100000",
+          "NGN",
+          "64492",
+          "20",
+          "DUSTERS",
+          "11216"
+        ],
+        [
+          "11216",
+          "ocds-gyl66f-123031011-000058",
+          "ocds-gyl66f-123031011-000058-2024-09-09T15:09:00Z",
+          "PRINTING OF CUSTOMIZED OF EXERCISE BOOKS/POSTERS",
+          "2021-06-25T00:00:00Z",
+          "2100000",
+          "NGN",
+          "64493",
+          "12",
+          "COVI-19 MATERIALS, SANITIZER",
+          "11216"
+        ],
+        [
+          "11216",
+          "ocds-gyl66f-123031011-000058",
+          "ocds-gyl66f-123031011-000058-2024-09-09T15:09:00Z",
+          "PRINTING OF CUSTOMIZED OF EXERCISE BOOKS/POSTERS",
+          "2021-06-25T00:00:00Z",
+          "2100000",
+          "NGN",
+          "64494",
+          "48",
+          "COVI-19 MATERIALS, FACE MASKS",
+          "11216"
+        ],
+        [
+          "18367",
+          "ocds-gyl66f-232005001-000122",
+          "ocds-gyl66f-232005001-000122-2025-02-24T14:04:00Z",
+          "CONTRACT FOR THE REPLENISHMENT OF CENTRAL STORE ITEMS (XEROX A4 PAPER AND HARD COVER NOTEBOOK",
+          "2021-05-31T00:00:00Z",
+          "2112584.62",
+          "NGN",
+          "90193",
+          "1",
+          "STORE ITEMS",
+          "18367"
+        ],
+        [
+          "3780",
+          "ocds-gyl66f-156006003-000528",
+          "ocds-gyl66f-156006003-000528-2021-08-31T18:11:00Z",
+          " supply of five (5) Probook 450 G5 Note book PC, five (5) Executive Carrier Bags and forty (40) Samsung Tab S3 9.7inch (wi-Fi) for the Federal Charact",
+          "2021-04-13T00:00:00Z",
+          "12913437.5",
+          "NGN",
+          "18304",
+          "1",
+          "supply of five (5) Probook 450 G5 Note book PC, five (5) Executive Carrier Bags and forty (40) Samsung Tab S3 9.7inch (wi-Fi) for the Federal Character Commission",
+          "3780"
+        ],
+        [
+          "3780",
+          "ocds-gyl66f-156006003-000528",
+          "ocds-gyl66f-156006003-000528-2021-08-31T18:11:00Z",
+          " supply of five (5) Probook 450 G5 Note book PC, five (5) Executive Carrier Bags and forty (40) Samsung Tab S3 9.7inch (wi-Fi) for the Federal Charact",
+          "2021-04-13T00:00:00Z",
+          "12913437.5",
+          "NGN",
+          "18305",
+          "1",
+          "supply of five (5) Probook 450 G5 Note book PC, five (5) Executive Carrier Bags and forty (40) Samsung Tab S3 9.7inch (wi-Fi) for the Federal Character Commission",
+          "3780"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN",
+          "64507",
+          "3000",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS 80 LEAVE",
+          "11217"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN",
+          "64508",
+          "80",
+          "PRITING OF POSTERS",
+          "11217"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN",
+          "64509",
+          "5000",
+          "FLYERS",
+          "11217"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN",
+          "64510",
+          "3000",
+          "CUSTOMIZED BIROS",
+          "11217"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN",
+          "64511",
+          "40",
+          "DUSTERS",
+          "11217"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN",
+          "64512",
+          "24",
+          "MEDIUM SIZE MAGNETIC BOARD (4X3FT SIZE) AND STANDS",
+          "11217"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN",
+          "64513",
+          "50",
+          "MAKERS",
+          "11217"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN",
+          "64514",
+          "100",
+          "COVID-19 MATERIALS SANITIZER (200ML)",
+          "11217"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN",
+          "64515",
+          "210",
+          "COVID-19 MATERIALS FACE MASKES",
+          "11217"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN",
+          "64516",
+          "48",
+          "ROLL-UP BANNERS",
+          "11217"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN",
+          "64517",
+          "4000",
+          "CERTIFICATES",
+          "11217"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN",
+          "64518",
+          "3",
+          "PROJECTOR SCREENS",
+          "11217"
+        ]
+      ],
+      "status": "ok",
+      "requestedBy": "data-agent"
+    },
+    {
+      "tool": "searchOyoBookContracts",
+      "params": {},
+      "sql": "SELECT ocid, id, date, tender_title, tender_value_amount, tender_value_currency, buyer_name, tender_procuringEntity_name FROM states_pg.oyo_main WHERE lower(tender_title) LIKE '%exercise book%' OR lower(tender_title) LIKE '%notebook%' OR lower(tender_title) LIKE '%note book%' ORDER BY date DESC, id DESC",
+      "limit": 500,
+      "startedAt": "2026-10-25T12:41:38.093Z",
+      "durationMs": 1039,
+      "rowCount": 29,
+      "resultRows": [
+        [
+          "ocds-vsryzs-37759914035",
+          "ocds-vsryzs-37759914035-2022-01-18T00:00:00.000Z",
+          "2022-01-18T00:00:00.000Z",
+          "Award of Contract for the procurement of 222,666 copies of 80 leaves of customized exercise books for students of public secondary schools for 2021/2022 academic session (Lot XV)",
+          "62346480",
+          "NGN",
+          "Oyo State Education Trust Fund",
+          "Oyo State Education Trust Fund"
+        ],
+        [
+          "ocds-vsryzs-37159873645",
+          "ocds-vsryzs-37159873645-2022-01-18T00:00:00.000Z",
+          "2022-01-18T00:00:00.000Z",
+          "Award of Contract for the procurement of 200,000 copies of 80 leaves of customized exercise books for students of public secondary schools for 2021/2022 academic session (Lot XIV)",
+          "56000000",
+          "NGN",
+          "Oyo State Education Trust Fund",
+          "Oyo State Education Trust Fund"
+        ],
+        [
+          "ocds-vsryzs-36474270642",
+          "ocds-vsryzs-36474270642-2022-01-18T00:00:00.000Z",
+          "2022-01-18T00:00:00.000Z",
+          "Award of Contract for the procurement of 200,000 copies of 80 leaves of customized exercise books for students of public secondary schools for 2021/2022 academic session (Lot XIII)",
+          "56000000",
+          "NGN",
+          "Oyo State Education Trust Fund",
+          "Oyo State Education Trust Fund"
+        ],
+        [
+          "ocds-vsryzs-33385939489",
+          "ocds-vsryzs-33385939489-2022-01-18T00:00:00.000Z",
+          "2022-01-18T00:00:00.000Z",
+          "Award of Contract for the procurement of 200,000 copies of 80 leaves of customized exercise books for students of public secondary schools for 2021/2022 academic session (Lot XII)",
+          "56000000",
+          "NGN",
+          "Oyo State Education Trust Fund",
+          "Oyo State Education Trust Fund"
+        ],
+        [
+          "ocds-vsryzs-32832320303",
+          "ocds-vsryzs-32832320303-2022-01-18T00:00:00.000Z",
+          "2022-01-18T00:00:00.000Z",
+          "Award of Contract for the procurement of 200,000 copies of 80 leaves of customized exercise books for students of public secondary schools for 2021/2022 academic session (Lot XI)",
+          "56000000",
+          "NGN",
+          "Oyo State Education Trust Fund",
+          "Oyo State Education Trust Fund"
+        ],
+        [
+          "ocds-vsryzs-32227146979",
+          "ocds-vsryzs-32227146979-2022-01-18T00:00:00.000Z",
+          "2022-01-18T00:00:00.000Z",
+          "Award of Contract for the procurement of 200,000 copies of 80 leaves of customized exercise books for students of public secondary schools for 2021/2022 academic session (Lot X)",
+          "56000000",
+          "NGN",
+          "Oyo State Education Trust Fund",
+          "Oyo State Education Trust Fund"
+        ],
+        [
+          "ocds-vsryzs-31732767685",
+          "ocds-vsryzs-31732767685-2022-01-18T00:00:00.000Z",
+          "2022-01-18T00:00:00.000Z",
+          "Award of Contract for the procurement of 200,000 copies of 80 leaves of customized exercise books for students of public secondary schools for 2021/2022 academic session (Lot IX)",
+          "56000000",
+          "NGN",
+          "Oyo State Education Trust Fund",
+          "Oyo State Education Trust Fund"
+        ],
+        [
+          "ocds-vsryzs-31174600529",
+          "ocds-vsryzs-31174600529-2022-01-18T00:00:00.000Z",
+          "2022-01-18T00:00:00.000Z",
+          "Award of Contract for the procurement of 210,988 copies of 60 leaves of customized exercise books for students of public secondary schools for 2021/2022 academic session (Lot VIII)",
+          "52747000",
+          "NGN",
+          "Oyo State Education Trust Fund",
+          "Oyo State Education Trust Fund"
+        ],
+        [
+          "ocds-vsryzs-30331875413",
+          "ocds-vsryzs-30331875413-2022-01-18T00:00:00.000Z",
+          "2022-01-18T00:00:00.000Z",
+          "Award of Contract for the procurement of 200,000 copies of 60 leaves of customized exercise books for students of public secondary schools for 2021/2022 academic session (Lot VII)",
+          "50000000",
+          "NGN",
+          "Oyo State Education Trust Fund",
+          "Oyo State Education Trust Fund"
+        ],
+        [
+          "ocds-vsryzs-29531138311",
+          "ocds-vsryzs-29531138311-2022-01-18T00:00:00.000Z",
+          "2022-01-18T00:00:00.000Z",
+          "Award of Contract for the procurement of 200,000 copies of 60 leaves of customized exercise books for students of public secondary schools for 2021/2022 academic session (Lot VI)",
+          "50000000",
+          "NGN",
+          "Oyo State Education Trust Fund",
+          "Oyo State Education Trust Fund"
+        ],
+        [
+          "ocds-vsryzs-28652117723",
+          "ocds-vsryzs-28652117723-2022-01-18T00:00:00.000Z",
+          "2022-01-18T00:00:00.000Z",
+          "Award of Contract for the procurement of 200,000 copies of 60 leaves of customized exercise books for students of public secondary schools for 2021/2022 academic session (Lot V)",
+          "50000000",
+          "NGN",
+          "Oyo State Education Trust Fund",
+          "Oyo State Education Trust Fund"
+        ],
+        [
+          "ocds-vsryzs-27918972759",
+          "ocds-vsryzs-27918972759-2022-01-18T00:00:00.000Z",
+          "2022-01-18T00:00:00.000Z",
+          "Award of Contract for the procurement of 200,000 copies of 60 leaves of customized exercise books for students of public secondary schools for 2021/2022 academic session (Lot IV)",
+          "50000000",
+          "NGN",
+          "Oyo State Education Trust Fund",
+          "Oyo State Education Trust Fund"
+        ],
+        [
+          "ocds-vsryzs-27021301693",
+          "ocds-vsryzs-27021301693-2022-01-18T00:00:00.000Z",
+          "2022-01-18T00:00:00.000Z",
+          "Award of Contract for the procurement of 200,000 copies of 60 leaves of customized exercise books for students of public secondary schools for 2021/2022 academic session (Lot III)",
+          "50000000",
+          "NGN",
+          "Oyo State Education Trust Fund",
+          "Oyo State Education Trust Fund"
+        ],
+        [
+          "ocds-vsryzs-23157792161",
+          "ocds-vsryzs-23157792161-2022-01-18T00:00:00.000Z",
+          "2022-01-18T00:00:00.000Z",
+          "Award of Contract for the procurement of 200,000 copies of 60 leaves of customized exercise books for students of public secondary schools for 2021/2022 academic session (Lot II)",
+          "50000000",
+          "NGN",
+          "Oyo State Education Trust Fund",
+          "Oyo State Education Trust Fund"
+        ],
+        [
+          "ocds-vsryzs-63923f49e5241343aa7acb6a06a751e7",
+          "ocds-vsryzs-63923f49e5241343aa7acb6a06a751e7-2021-01-12T15:14:54.000Z",
+          "2021-01-12T15:14:54.000Z",
+          "Production of 212,505 copies of 60 leaves of customized exercise books for students of Public Secondary Schools for the 2020/2021 academic session",
+          "446370480",
+          "NGN",
+          "Oyo State Education Trust Fund (ETF)",
+          "Oyo State Education Trust Fund (ETF)"
+        ],
+        [
+          "ocds-vsryzs-5f3b5cb95ebef",
+          "ocds-vsryzs-5f3b5cb95ebef-2020-07-10T00:00:00.000Z",
+          "2020-07-10T00:00:00.000Z",
+          "Production of 2nd batch of customised exercise books for students of public secondary schools in the state",
+          "10419942",
+          "NGN",
+          "Oyo State Education Trust Fund",
+          "Oyo State Education Trust Fund"
+        ],
+        [
+          "ocds-vsryzs-5f3b5ccf59aed",
+          "ocds-vsryzs-5f3b5ccf59aed-2019-09-24T00:00:00.000Z",
+          "2019-09-24T00:00:00.000Z",
+          "Production of 205,000 Copies (80,000) of Customised Exercise Books for Students of Public Secondary Schools (Lot 8)",
+          "35577750",
+          "NGN",
+          "Ministry of Education ",
+          "Ministry of Education "
+        ],
+        [
+          "ocds-vsryzs-5f3b5ccf7a437",
+          "ocds-vsryzs-5f3b5ccf7a437-2019-09-23T00:00:00.000Z",
+          "2019-09-23T00:00:00.000Z",
+          "Production of 250,000 Copies (60,000) of Customised Exercise Books for Students of Public Secondary Schools (Lot 4)",
+          "37500000",
+          "NGN",
+          "Ministry of Education ",
+          "Ministry of Education "
+        ],
+        [
+          "ocds-vsryzs-5f3b5ccf1e0b2",
+          "ocds-vsryzs-5f3b5ccf1e0b2-2019-09-23T00:00:00.000Z",
+          "2019-09-23T00:00:00.000Z",
+          "Production of 205,000 Copies (80,000) of Customised Exercise Books for Students of Public Secondary Schools (Lot 8)",
+          "35577750",
+          "NGN",
+          "Ministry of Education ",
+          "Ministry of Education "
+        ],
+        [
+          "ocds-vsryzs-5f3b5cceeeecc",
+          "ocds-vsryzs-5f3b5cceeeecc-2019-09-23T00:00:00.000Z",
+          "2019-09-23T00:00:00.000Z",
+          "Production of 250,000 Copies (60,000) of Customised Exercise Books for Students of Public Secondary Schools (Lot 4)",
+          "37500000",
+          "NGN",
+          "Ministry of Education ",
+          "Ministry of Education "
+        ],
+        [
+          "ocds-vsryzs-5f3b5ccece4cc",
+          "ocds-vsryzs-5f3b5ccece4cc-2019-09-23T00:00:00.000Z",
+          "2019-09-23T00:00:00.000Z",
+          "Production of 205,000 Copies (80,000) of Customised Exercise Books for Students of Public Secondary Schools (Lot 8)",
+          "35577750",
+          "NGN",
+          "Ministry of Education ",
+          "Ministry of Education "
+        ],
+        [
+          "ocds-vsryzs-5f3b5cce5f304",
+          "ocds-vsryzs-5f3b5cce5f304-2019-09-23T00:00:00.000Z",
+          "2019-09-23T00:00:00.000Z",
+          "Production of 265,864 Copies (60,000) of Customised Exercise Books for Students of Public Secondary Schools (Lot 6)",
+          "39879600",
+          "NGN",
+          "Ministry of Education ",
+          "Ministry of Education "
+        ],
+        [
+          "ocds-vsryzs-5f3b5cce0a35a",
+          "ocds-vsryzs-5f3b5cce0a35a-2019-09-23T00:00:00.000Z",
+          "2019-09-23T00:00:00.000Z",
+          "Production of 250,000 Copies (60,000) of Customised Exercise Books for Students of Public Secondary Schools (Lot 4)",
+          "37500000",
+          "NGN",
+          "Ministry of Education ",
+          "Ministry of Education "
+        ],
+        [
+          "ocds-vsryzs-5f3b5ccd7cfc7",
+          "ocds-vsryzs-5f3b5ccd7cfc7-2019-09-23T00:00:00.000Z",
+          "2019-09-23T00:00:00.000Z",
+          "Production of 250,000 Copies (60,000) of Customised Exercise Books for Students of Public Secondary Schools (Lot 4)",
+          "37500000",
+          "NGN",
+          "Ministry of Education ",
+          "Ministry of Education "
+        ],
+        [
+          "ocds-vsryzs-5f3b5ccd497d8",
+          "ocds-vsryzs-5f3b5ccd497d8-2019-09-23T00:00:00.000Z",
+          "2019-09-23T00:00:00.000Z",
+          "Production of 205,000 Copies (80,000) of Customised Exercise Books for Students of Public Secondary Schools (Lot 8)",
+          "35577750",
+          "NGN",
+          "Ministry of Education ",
+          "Ministry of Education "
+        ],
+        [
+          "ocds-vsryzs-5f3b5ccceefee",
+          "ocds-vsryzs-5f3b5ccceefee-2019-09-23T00:00:00.000Z",
+          "2019-09-23T00:00:00.000Z",
+          "Production of 241,942 Copies (80,000) of Customised Exercise Books for Students of Public Secondary Schools (Lot 12)",
+          "41989034",
+          "NGN",
+          "Ministry of Education ",
+          "Ministry of Education "
+        ],
+        [
+          "ocds-vsryzs-5f3b5ccc65eb3",
+          "ocds-vsryzs-5f3b5ccc65eb3-2019-09-23T00:00:00.000Z",
+          "2019-09-23T00:00:00.000Z",
+          "Production of 205,000 Copies (80,000) of Customised Exercise Books for Students of Public Secondary Schools (Lot 11)",
+          "35577750",
+          "NGN",
+          "Ministry of Education ",
+          "Ministry of Education "
+        ],
+        [
+          "ocds-vsryzs-5f3b5ccc234f4",
+          "ocds-vsryzs-5f3b5ccc234f4-2019-09-23T00:00:00.000Z",
+          "2019-09-23T00:00:00.000Z",
+          "Production of 250,000 Copies (60,000) of Customised Exercise Books for Students of Public Secondary Schools (Lot 4)",
+          "37500000",
+          "NGN",
+          "Ministry of Education ",
+          "Ministry of Education "
+        ],
+        [
+          "ocds-vsryzs-5f3b5cb9822e4",
+          "ocds-vsryzs-5f3b5cb9822e4-2019-09-23T00:00:00.000Z",
+          "2019-09-23T00:00:00.000Z",
+          "Production of 2nd batch of customised exercise books for students of public secondary schools in the state",
+          "10504500",
+          "NGN",
+          "Oyo State Education Trust Fund",
+          "Oyo State Education Trust Fund"
+        ]
+      ],
+      "status": "ok",
+      "requestedBy": "data-agent"
+    },
+    {
+      "tool": "getNigeriaCpi",
+      "params": {},
+      "sql": "SELECT date, value, indicator_id, indicator_name FROM states_pg.world_bank_cpi WHERE countryiso3code = 'NGA' AND value IS NOT NULL ORDER BY date ASC",
+      "limit": 100,
+      "startedAt": "2026-10-25T12:41:39.133Z",
+      "durationMs": 474,
+      "rowCount": 66,
+      "resultRows": [
+        [
+          "1960",
+          "0.0658845802812559",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1961",
+          "0.0700215700821296",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1962",
+          "0.0737086485257034",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1963",
+          "0.0717224544830774",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1964",
+          "0.0723369675570432",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1965",
+          "0.0753052851731509",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1966",
+          "0.082602627925785",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1967",
+          "0.0795245758324129",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1968",
+          "0.079145991884983",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1969",
+          "0.087184042360689",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1970",
+          "0.0991780207499144",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1971",
+          "0.115045626193888",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1972",
+          "0.119023501002685",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1973",
+          "0.125453941383194",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1974",
+          "0.141354467170687",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1975",
+          "0.18936436460235",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1976",
+          "0.23537990520072",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1977",
+          "0.270893634701562",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1978",
+          "0.329702599557456",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1979",
+          "0.368309885816767",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1980",
+          "0.405038712565537",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1981",
+          "0.489338702537636",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1982",
+          "0.52700675904143",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1983",
+          "0.649337315247128",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1984",
+          "0.765052687649708",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1985",
+          "0.821936993089181",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1986",
+          "0.868928375843527",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1987",
+          "0.967033192471022",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1988",
+          "1.49417482971386",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1989",
+          "2.24823538104675",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1990",
+          "2.41380443431865",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1991",
+          "2.72776732786743",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1992",
+          "3.94404721132202",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1993",
+          "6.19867177160294",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1994",
+          "9.73388021279174",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1995",
+          "16.8236007587925",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1996",
+          "21.7475814686831",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1997",
+          "23.6026228125133",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1998",
+          "25.9620302360025",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "1999",
+          "27.6802943378914",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2000",
+          "29.5994500138817",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2001",
+          "35.1859454894259",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2002",
+          "39.7166916287349",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2003",
+          "45.2896518563785",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2004",
+          "52.0822091579998",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2005",
+          "61.385911135889",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2006",
+          "66.4363981671634",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2007",
+          "70.0147318096052",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2008",
+          "78.124576560861",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2009",
+          "87.9197768259366",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2010",
+          "100",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2011",
+          "110.826137188001",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2012",
+          "124.373791623613",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2013",
+          "134.939989954204",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2014",
+          "145.799165386817",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2015",
+          "158.934846393837",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2016",
+          "183.882551450038",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2017",
+          "214.227339611352",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2018",
+          "240.138364526616",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2019",
+          "267.505546743183",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2020",
+          "302.939394135074",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2021",
+          "354.296242254442",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2022",
+          "421.071120344952",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2023",
+          "524.90536465723",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2024",
+          "699.392616339434",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ],
+        [
+          "2025",
+          "860.323721691846",
+          "FP.CPI.TOTL",
+          "Consumer price index (2010 = 100)"
+        ]
+      ],
+      "status": "ok",
+      "requestedBy": "data-agent"
+    },
+    {
+      "tool": "getCrossPublisherSuppliers",
+      "params": {},
+      "sql": "SELECT b.name AS supplier, count(DISTINCT b.main_ocid) AS bpp_awards, count(DISTINCT o.main_ocid) AS osun_awards FROM bpp_pg.bpp_awards_suppliers b JOIN states_pg.osun_awards_suppliers o ON upper(trim(b.name)) = upper(trim(o.name)) GROUP BY b.name ORDER BY bpp_awards DESC",
+      "limit": 50,
+      "startedAt": "2026-10-25T12:41:39.607Z",
+      "durationMs": 1966,
+      "rowCount": 7,
+      "resultRows": [
+        [
+          "Symroyal Integrated Nigeria Limited",
+          "2",
+          "1"
+        ],
+        [
+          "TAMGAJ CORPORATE SERVICES LTD ",
+          "2",
+          "1"
+        ],
+        [
+          "SALFAT ULTIMATE SYNERGY LTD",
+          "1",
+          "1"
+        ],
+        [
+          "JOELF BUILDERS GLOBAL CONCEPTS LTD",
+          "1",
+          "1"
+        ],
+        [
+          "Raregeode Company Limited",
+          "1",
+          "1"
+        ],
+        [
+          "Larbol Smart Choice Limited",
+          "1",
+          "1"
+        ],
+        [
+          "TERA & PICO VENTURE",
+          "1",
+          "1"
+        ]
+      ],
+      "status": "ok",
+      "requestedBy": "data-agent"
+    },
+    {
+      "tool": "getLeafMatchedComparison",
+      "params": {
+        "leafCounts": [
+          20,
+          40,
+          60,
+          80,
+          100
+        ]
+      },
+      "sql": "SELECT c.id, c.main_ocid, c.main_id, c.title, c.dateSigned, c.value_amount, c.value_currency, i.id, i.quantity, i.description, i.contracts_id FROM bpp_pg.bpp_contracts c JOIN bpp_pg.bpp_contracts_items i ON i.main_ocid = c.main_ocid AND i.main_id = c.main_id AND i.contracts_id = c.id WHERE (lower(c.title) LIKE '%exercise book%' OR lower(c.title) LIKE '%notebook%' OR lower(c.title) LIKE '%note book%') ORDER BY c.dateSigned DESC, c.id DESC, i.id",
+      "limit": 2000,
+      "startedAt": "2026-10-25T12:43:17.185Z",
+      "durationMs": 4829,
+      "rowCount": 58,
+      "resultRows": [
+        [
+          "15558",
+          "ocds-gyl66f-539001003-002448",
+          "ocds-gyl66f-539001003-002448-2025-02-11T15:02:00Z",
+          "PRINTING AND SUPPLY OF CUSTOMIZED NOTEBOOKS TO  SELECTED PRIMARY AND SECONDARY SCHOOLS IN ALOR AND  SELECTED COMMUNITIES IN IDEMILI SOUTH LGA OF ANAMB",
+          "2024-11-06T00:00:00Z",
+          "148314250",
+          "NGN",
+          "83318",
+          "6000",
+          "CUSTOMISED 20 LEAVES EXERCISE BOOKS",
+          "15558"
+        ],
+        [
+          "15558",
+          "ocds-gyl66f-539001003-002448",
+          "ocds-gyl66f-539001003-002448-2025-02-11T15:02:00Z",
+          "PRINTING AND SUPPLY OF CUSTOMIZED NOTEBOOKS TO  SELECTED PRIMARY AND SECONDARY SCHOOLS IN ALOR AND  SELECTED COMMUNITIES IN IDEMILI SOUTH LGA OF ANAMB",
+          "2024-11-06T00:00:00Z",
+          "148314250",
+          "NGN",
+          "83319",
+          "24000",
+          "CUSTOMISED 40 LEAVES EXERCISE BOOKS",
+          "15558"
+        ],
+        [
+          "15558",
+          "ocds-gyl66f-539001003-002448",
+          "ocds-gyl66f-539001003-002448-2025-02-11T15:02:00Z",
+          "PRINTING AND SUPPLY OF CUSTOMIZED NOTEBOOKS TO  SELECTED PRIMARY AND SECONDARY SCHOOLS IN ALOR AND  SELECTED COMMUNITIES IN IDEMILI SOUTH LGA OF ANAMB",
+          "2024-11-06T00:00:00Z",
+          "148314250",
+          "NGN",
+          "83320",
+          "24000",
+          "CUSTOMISED 60 LEAVES EXERCISE BOOKS",
+          "15558"
+        ],
+        [
+          "15558",
+          "ocds-gyl66f-539001003-002448",
+          "ocds-gyl66f-539001003-002448-2025-02-11T15:02:00Z",
+          "PRINTING AND SUPPLY OF CUSTOMIZED NOTEBOOKS TO  SELECTED PRIMARY AND SECONDARY SCHOOLS IN ALOR AND  SELECTED COMMUNITIES IN IDEMILI SOUTH LGA OF ANAMB",
+          "2024-11-06T00:00:00Z",
+          "148314250",
+          "NGN",
+          "83321",
+          "20000",
+          "CUSTOMISED 80 LEAVES EXERCISE BOOKS",
+          "15558"
+        ],
+        [
+          "16869",
+          "ocds-gyl66f-539001003-002067",
+          "ocds-gyl66f-539001003-002067-2025-02-13T10:16:00Z",
+          "SUPPLY AND DISTRIBUTION OF EXERCISE BOOKS TO SELECTED SCHOOLS IN BAGUDO/SURU FEDERAL CONSTITUENCY, KEBBI STATE",
+          "2024-10-28T00:00:00Z",
+          "97467315.2",
+          "NGN",
+          "85454",
+          "25",
+          "SUPPLY OF CHAIRS AND DESKS FOR SELECTED PRIMARY AND SECONDARY SCHOOLS IN ORON/MBO/OKOBO/UDUNG UKO/URUEOFFONG ORUKO FEDERAL CONSTITUENCY, AKWA IBOM STATE",
+          "16869"
+        ],
+        [
+          "16869",
+          "ocds-gyl66f-539001003-002067",
+          "ocds-gyl66f-539001003-002067-2025-02-13T10:16:00Z",
+          "SUPPLY AND DISTRIBUTION OF EXERCISE BOOKS TO SELECTED SCHOOLS IN BAGUDO/SURU FEDERAL CONSTITUENCY, KEBBI STATE",
+          "2024-10-28T00:00:00Z",
+          "97467315.2",
+          "NGN",
+          "85455",
+          "2400",
+          "20 LEAVES EXRCISE BOOKS",
+          "16869"
+        ],
+        [
+          "16869",
+          "ocds-gyl66f-539001003-002067",
+          "ocds-gyl66f-539001003-002067-2025-02-13T10:16:00Z",
+          "SUPPLY AND DISTRIBUTION OF EXERCISE BOOKS TO SELECTED SCHOOLS IN BAGUDO/SURU FEDERAL CONSTITUENCY, KEBBI STATE",
+          "2024-10-28T00:00:00Z",
+          "97467315.2",
+          "NGN",
+          "85456",
+          "12000",
+          "40 LEAVES EXERCISE BOOKS",
+          "16869"
+        ],
+        [
+          "16869",
+          "ocds-gyl66f-539001003-002067",
+          "ocds-gyl66f-539001003-002067-2025-02-13T10:16:00Z",
+          "SUPPLY AND DISTRIBUTION OF EXERCISE BOOKS TO SELECTED SCHOOLS IN BAGUDO/SURU FEDERAL CONSTITUENCY, KEBBI STATE",
+          "2024-10-28T00:00:00Z",
+          "97467315.2",
+          "NGN",
+          "85457",
+          "18000",
+          "60 LEAVES EXERCISE BOOKS",
+          "16869"
+        ],
+        [
+          "16869",
+          "ocds-gyl66f-539001003-002067",
+          "ocds-gyl66f-539001003-002067-2025-02-13T10:16:00Z",
+          "SUPPLY AND DISTRIBUTION OF EXERCISE BOOKS TO SELECTED SCHOOLS IN BAGUDO/SURU FEDERAL CONSTITUENCY, KEBBI STATE",
+          "2024-10-28T00:00:00Z",
+          "97467315.2",
+          "NGN",
+          "85458",
+          "12960",
+          "80 LEAVES EXERCISE BOOKS",
+          "16869"
+        ],
+        [
+          "17018",
+          "ocds-gyl66f-539001003-002244",
+          "ocds-gyl66f-539001003-002244-2025-02-13T10:30:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED  SCHOOLS IN TUDUN/S",
+          "2024-10-15T00:00:00Z",
+          "19688875",
+          "NGN",
+          "86188",
+          "1200",
+          "PRINTING AND SUPPLY OF CUSTOMISED 60 LEAVES EXERCISE BOOKS",
+          "17018"
+        ],
+        [
+          "17018",
+          "ocds-gyl66f-539001003-002244",
+          "ocds-gyl66f-539001003-002244-2025-02-13T10:30:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED  SCHOOLS IN TUDUN/S",
+          "2024-10-15T00:00:00Z",
+          "19688875",
+          "NGN",
+          "86189",
+          "3500",
+          "PRINTING AND SUPPLY OF CUSTOMISED 80 LEAVES EXERCISE BOOKS",
+          "17018"
+        ],
+        [
+          "17018",
+          "ocds-gyl66f-539001003-002244",
+          "ocds-gyl66f-539001003-002244-2025-02-13T10:30:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED  SCHOOLS IN TUDUN/S",
+          "2024-10-15T00:00:00Z",
+          "19688875",
+          "NGN",
+          "86190",
+          "3500",
+          "PRINTING AND SUPPLY OF CUSTOMISED 100 LEAVES EXERCISE BOOKS",
+          "17018"
+        ],
+        [
+          "15613",
+          "ocds-gyl66f-539001003-002381",
+          "ocds-gyl66f-539001003-002381-2025-02-12T10:50:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED  SCHOOLS IN GALADIMAWA II",
+          "2024-10-15T00:00:00Z",
+          "19753375",
+          "NGN",
+          "83728",
+          "1200",
+          "CUSTOMISED 60 LEAVES EXERCISE BOOKS",
+          "15613"
+        ],
+        [
+          "15613",
+          "ocds-gyl66f-539001003-002381",
+          "ocds-gyl66f-539001003-002381-2025-02-12T10:50:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED  SCHOOLS IN GALADIMAWA II",
+          "2024-10-15T00:00:00Z",
+          "19753375",
+          "NGN",
+          "83729",
+          "3500",
+          "CUSTOMISED 80 LEAVES EXERCISE BOOKS",
+          "15613"
+        ],
+        [
+          "15613",
+          "ocds-gyl66f-539001003-002381",
+          "ocds-gyl66f-539001003-002381-2025-02-12T10:50:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED  SCHOOLS IN GALADIMAWA II",
+          "2024-10-15T00:00:00Z",
+          "19753375",
+          "NGN",
+          "83730",
+          "3500",
+          "CUSTOMISED 100 LEAVES EXERCISE BOOKS",
+          "15613"
+        ],
+        [
+          "16955",
+          "ocds-gyl66f-539001003-002160",
+          "ocds-gyl66f-539001003-002160-2025-02-13T10:20:00Z",
+          "SUPPLY AND DISTRIBUTION OF EXERCISE BOOKS TO SELECTED SCHOOLS IN OREDO FEDERAL CONSTITUENCY, EDO STATE",
+          "2024-09-12T00:00:00Z",
+          "34182750",
+          "NGN",
+          "85964",
+          "2400",
+          "20 LEAVES EXERCISE BOOKS",
+          "16955"
+        ],
+        [
+          "16955",
+          "ocds-gyl66f-539001003-002160",
+          "ocds-gyl66f-539001003-002160-2025-02-13T10:20:00Z",
+          "SUPPLY AND DISTRIBUTION OF EXERCISE BOOKS TO SELECTED SCHOOLS IN OREDO FEDERAL CONSTITUENCY, EDO STATE",
+          "2024-09-12T00:00:00Z",
+          "34182750",
+          "NGN",
+          "85965",
+          "4800",
+          "40 LEAVES EXERCISE BOOKS",
+          "16955"
+        ],
+        [
+          "16955",
+          "ocds-gyl66f-539001003-002160",
+          "ocds-gyl66f-539001003-002160-2025-02-13T10:20:00Z",
+          "SUPPLY AND DISTRIBUTION OF EXERCISE BOOKS TO SELECTED SCHOOLS IN OREDO FEDERAL CONSTITUENCY, EDO STATE",
+          "2024-09-12T00:00:00Z",
+          "34182750",
+          "NGN",
+          "85966",
+          "4800",
+          "60 LEAVES EXERCISE BOOKS",
+          "16955"
+        ],
+        [
+          "17047",
+          "ocds-gyl66f-539001003-002278",
+          "ocds-gyl66f-539001003-002278-2025-02-13T10:31:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS FOR SCHOOLS IN IKEJA, LAGOS",
+          "2024-09-02T00:00:00Z",
+          "46965870",
+          "NGN",
+          "86281",
+          "2400",
+          "20 LEAVES EXERCISE BOOKS",
+          "17047"
+        ],
+        [
+          "17047",
+          "ocds-gyl66f-539001003-002278",
+          "ocds-gyl66f-539001003-002278-2025-02-13T10:31:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS FOR SCHOOLS IN IKEJA, LAGOS",
+          "2024-09-02T00:00:00Z",
+          "46965870",
+          "NGN",
+          "86282",
+          "6480",
+          "40 LEAVES EXERCISE BOOKS",
+          "17047"
+        ],
+        [
+          "17047",
+          "ocds-gyl66f-539001003-002278",
+          "ocds-gyl66f-539001003-002278-2025-02-13T10:31:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS FOR SCHOOLS IN IKEJA, LAGOS",
+          "2024-09-02T00:00:00Z",
+          "46965870",
+          "NGN",
+          "86283",
+          "6960",
+          "60 LEAVES EXERCISE BOOKS",
+          "17047"
+        ],
+        [
+          "17047",
+          "ocds-gyl66f-539001003-002278",
+          "ocds-gyl66f-539001003-002278-2025-02-13T10:31:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS FOR SCHOOLS IN IKEJA, LAGOS",
+          "2024-09-02T00:00:00Z",
+          "46965870",
+          "NGN",
+          "86284",
+          "6960",
+          "80 LEAVES EXERCISE BOOKS",
+          "17047"
+        ],
+        [
+          "18179",
+          "ocds-gyl66f-232005001-001937",
+          "ocds-gyl66f-232005001-001937-2025-02-24T12:49:00Z",
+          "Procurement of Notebook Thinkpad T14",
+          "2023-12-27T00:00:00Z",
+          "98742702",
+          "NGN",
+          "89793",
+          "1",
+          "Procurement of Notebook Thinkpad T14",
+          "18179"
+        ],
+        [
+          "18205",
+          "ocds-gyl66f-232005001-001922",
+          "ocds-gyl66f-232005001-001922-2025-02-24T12:50:00Z",
+          "Procurement of Notebook Thinkpad X1 Carbon gen 10 and 15.6 inch top load cases",
+          "2023-12-21T00:00:00Z",
+          "37394358.75",
+          "NGN",
+          "89847",
+          "1",
+          "Procurement of Notebook Thinkpad X1 Carbon gen 10 and 15.6 inch top load cases",
+          "18205"
+        ],
+        [
+          "18202",
+          "ocds-gyl66f-232005001-001919",
+          "ocds-gyl66f-232005001-001919-2025-02-24T12:50:00Z",
+          "Contract for Procurement of Notebook Thinkpad Detachable Gen 12",
+          "2023-12-15T00:00:00Z",
+          "36741470.4",
+          "NGN",
+          "89841",
+          "1",
+          "Procurement of Notebook Thinkpad Detachable Gen 12",
+          "18202"
+        ],
+        [
+          "18195",
+          "ocds-gyl66f-232005001-001934",
+          "ocds-gyl66f-232005001-001934-2025-02-24T12:49:00Z",
+          "Contract for thProcurement of Notebook Thinkpad P16 Gen 1 Lenovo Nano and Thinkpad USB and Thunderbolte ",
+          "2023-12-12T00:00:00Z",
+          "39129398",
+          "NGN",
+          "89827",
+          "1",
+          "Procurement of Notebook Thinkpad P16 Gen 1 Lenovo Nano and Thinkpad USB and Thunderbolt",
+          "18195"
+        ],
+        [
+          "18226",
+          "ocds-gyl66f-232005001-001904",
+          "ocds-gyl66f-232005001-001904-2025-02-24T12:51:00Z",
+          "Contract for the Procurement of Notebook thinkpad T14 Gen 3 (Part No. 2IAJSIPEOO) and 15.6 inch topload cases)",
+          "2023-09-18T00:00:00Z",
+          "96891593.63",
+          "NGN",
+          "89893",
+          "45",
+          "Procurement of Notebook thinkpad T14 Gen 3 ",
+          "18226"
+        ],
+        [
+          "16817",
+          "ocds-gyl66f-539001003-001999",
+          "ocds-gyl66f-539001003-001999-2025-02-13T10:08:00Z",
+          "SUPPLY OF CUSTOMIZED NOTEBOOKS AND INSTRUCTIONAL MATERIALS IN AKINYELE/LAGELU FED. CONST. ",
+          "2023-09-13T00:00:00Z",
+          "26657504.7",
+          "NGN",
+          "85309",
+          "27000",
+          "SUPPLY OF CUSTOMIZED NOTEBOOKS AND INSTRUCTIONAL MATERIALS IN AKINYELE/LAGELU FED. CONST. ",
+          "16817"
+        ],
+        [
+          "15707",
+          "ocds-gyl66f-539001003-001848",
+          "ocds-gyl66f-539001003-001848-2025-02-12T13:58:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED SCHOOLS IN KUBAU LOCAL GOVERNMENT",
+          "2023-08-16T00:00:00Z",
+          "28065250",
+          "NGN",
+          "84006",
+          "26700",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED SCHOOLS IN KUBAU LOCAL GOVERNMENT",
+          "15707"
+        ],
+        [
+          "15689",
+          "ocds-gyl66f-539001003-001825",
+          "ocds-gyl66f-539001003-001825-2025-02-12T13:57:00Z",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS FOR SCHOOLS IN GABASAWA COMMUNITIES",
+          "2023-08-14T00:00:00Z",
+          "24902536.38",
+          "NGN",
+          "83957",
+          "23400",
+          "PRINTING AND SUPPLY OF EXERCISE BOOKS FOR SCHOOLS IN GABASAWA COMMUNITIES",
+          "15689"
+        ],
+        [
+          "18185",
+          "ocds-gyl66f-232005001-001944",
+          "ocds-gyl66f-232005001-001944-2025-02-24T12:49:00Z",
+          "Contract for the Procurement of Notebook Thinkpad T14 Gen3 and 15.6 Inch Topload Case",
+          "2023-04-17T00:00:00Z",
+          "21531470.62",
+          "NGN",
+          "89806",
+          "1",
+          "TRAINING ON INTELLIGENGENCE LED POLICING FOR EFFECTIVE CRIME PREVENTION",
+          "18185"
+        ],
+        [
+          "18185",
+          "ocds-gyl66f-232005001-001944",
+          "ocds-gyl66f-232005001-001944-2025-02-24T12:49:00Z",
+          "Contract for the Procurement of Notebook Thinkpad T14 Gen3 and 15.6 Inch Topload Case",
+          "2023-04-17T00:00:00Z",
+          "21531470.62",
+          "NGN",
+          "89807",
+          "1",
+          "Procurement of Notebook Thinkpad T14 Gen3 and 15.6 Inch Topload Case",
+          "18185"
+        ],
+        [
+          "5927",
+          "ocds-gyl66f-517001001-000651",
+          "ocds-gyl66f-517001001-000651-2024-03-13T11:19:00Z",
+          "Supply of 40 and 60 leaves customise Exercise books into schools , Katsina State North senatorial district",
+          "2022-09-27T00:00:00Z",
+          "29412000",
+          "NGN",
+          "28024",
+          "1",
+          "Supply of 40 and 60 leaves customise Exercise books into schools , Katsina State North senatorial district",
+          "5927"
+        ],
+        [
+          "5856",
+          "ocds-gyl66f-517001001-000538",
+          "ocds-gyl66f-517001001-000538-2024-03-13T11:14:00Z",
+          "Supply of 60 and 40 leaves Customized Exercise books to schools in katsina north senatorial district, katsina state.",
+          "2021-12-08T00:00:00Z",
+          "30860951",
+          "NGN",
+          "27875",
+          "1",
+          "Supply of 60 and 40 leaves Customized Exercise books to schools in katsina north senatorial district, katsina state.",
+          "5856"
+        ],
+        [
+          "11216",
+          "ocds-gyl66f-123031011-000058",
+          "ocds-gyl66f-123031011-000058-2024-09-09T15:09:00Z",
+          "PRINTING OF CUSTOMIZED OF EXERCISE BOOKS/POSTERS",
+          "2021-06-25T00:00:00Z",
+          "2100000",
+          "NGN",
+          "64486",
+          "20",
+          "MARKERS ",
+          "11216"
+        ],
+        [
+          "11216",
+          "ocds-gyl66f-123031011-000058",
+          "ocds-gyl66f-123031011-000058-2024-09-09T15:09:00Z",
+          "PRINTING OF CUSTOMIZED OF EXERCISE BOOKS/POSTERS",
+          "2021-06-25T00:00:00Z",
+          "2100000",
+          "NGN",
+          "64487",
+          "1300",
+          "CUSTOMIZED EXERCISE BOOKS (80 LEAVES) ",
+          "11216"
+        ],
+        [
+          "11216",
+          "ocds-gyl66f-123031011-000058",
+          "ocds-gyl66f-123031011-000058-2024-09-09T15:09:00Z",
+          "PRINTING OF CUSTOMIZED OF EXERCISE BOOKS/POSTERS",
+          "2021-06-25T00:00:00Z",
+          "2100000",
+          "NGN",
+          "64488",
+          "13",
+          "MEDIUM SIZE OF MAGNETIC WITE BOARD",
+          "11216"
+        ],
+        [
+          "11216",
+          "ocds-gyl66f-123031011-000058",
+          "ocds-gyl66f-123031011-000058-2024-09-09T15:09:00Z",
+          "PRINTING OF CUSTOMIZED OF EXERCISE BOOKS/POSTERS",
+          "2021-06-25T00:00:00Z",
+          "2100000",
+          "NGN",
+          "64489",
+          "1500",
+          "FLYERS",
+          "11216"
+        ],
+        [
+          "11216",
+          "ocds-gyl66f-123031011-000058",
+          "ocds-gyl66f-123031011-000058-2024-09-09T15:09:00Z",
+          "PRINTING OF CUSTOMIZED OF EXERCISE BOOKS/POSTERS",
+          "2021-06-25T00:00:00Z",
+          "2100000",
+          "NGN",
+          "64490",
+          "1200",
+          "POSTERS",
+          "11216"
+        ],
+        [
+          "11216",
+          "ocds-gyl66f-123031011-000058",
+          "ocds-gyl66f-123031011-000058-2024-09-09T15:09:00Z",
+          "PRINTING OF CUSTOMIZED OF EXERCISE BOOKS/POSTERS",
+          "2021-06-25T00:00:00Z",
+          "2100000",
+          "NGN",
+          "64491",
+          "30",
+          "CUSTOMIZED BIROS",
+          "11216"
+        ],
+        [
+          "11216",
+          "ocds-gyl66f-123031011-000058",
+          "ocds-gyl66f-123031011-000058-2024-09-09T15:09:00Z",
+          "PRINTING OF CUSTOMIZED OF EXERCISE BOOKS/POSTERS",
+          "2021-06-25T00:00:00Z",
+          "2100000",
+          "NGN",
+          "64492",
+          "20",
+          "DUSTERS",
+          "11216"
+        ],
+        [
+          "11216",
+          "ocds-gyl66f-123031011-000058",
+          "ocds-gyl66f-123031011-000058-2024-09-09T15:09:00Z",
+          "PRINTING OF CUSTOMIZED OF EXERCISE BOOKS/POSTERS",
+          "2021-06-25T00:00:00Z",
+          "2100000",
+          "NGN",
+          "64493",
+          "12",
+          "COVI-19 MATERIALS, SANITIZER",
+          "11216"
+        ],
+        [
+          "11216",
+          "ocds-gyl66f-123031011-000058",
+          "ocds-gyl66f-123031011-000058-2024-09-09T15:09:00Z",
+          "PRINTING OF CUSTOMIZED OF EXERCISE BOOKS/POSTERS",
+          "2021-06-25T00:00:00Z",
+          "2100000",
+          "NGN",
+          "64494",
+          "48",
+          "COVI-19 MATERIALS, FACE MASKS",
+          "11216"
+        ],
+        [
+          "18367",
+          "ocds-gyl66f-232005001-000122",
+          "ocds-gyl66f-232005001-000122-2025-02-24T14:04:00Z",
+          "CONTRACT FOR THE REPLENISHMENT OF CENTRAL STORE ITEMS (XEROX A4 PAPER AND HARD COVER NOTEBOOK",
+          "2021-05-31T00:00:00Z",
+          "2112584.62",
+          "NGN",
+          "90193",
+          "1",
+          "STORE ITEMS",
+          "18367"
+        ],
+        [
+          "3780",
+          "ocds-gyl66f-156006003-000528",
+          "ocds-gyl66f-156006003-000528-2021-08-31T18:11:00Z",
+          " supply of five (5) Probook 450 G5 Note book PC, five (5) Executive Carrier Bags and forty (40) Samsung Tab S3 9.7inch (wi-Fi) for the Federal Charact",
+          "2021-04-13T00:00:00Z",
+          "12913437.5",
+          "NGN",
+          "18304",
+          "1",
+          "supply of five (5) Probook 450 G5 Note book PC, five (5) Executive Carrier Bags and forty (40) Samsung Tab S3 9.7inch (wi-Fi) for the Federal Character Commission",
+          "3780"
+        ],
+        [
+          "3780",
+          "ocds-gyl66f-156006003-000528",
+          "ocds-gyl66f-156006003-000528-2021-08-31T18:11:00Z",
+          " supply of five (5) Probook 450 G5 Note book PC, five (5) Executive Carrier Bags and forty (40) Samsung Tab S3 9.7inch (wi-Fi) for the Federal Charact",
+          "2021-04-13T00:00:00Z",
+          "12913437.5",
+          "NGN",
+          "18305",
+          "1",
+          "supply of five (5) Probook 450 G5 Note book PC, five (5) Executive Carrier Bags and forty (40) Samsung Tab S3 9.7inch (wi-Fi) for the Federal Character Commission",
+          "3780"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN",
+          "64507",
+          "3000",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS 80 LEAVE",
+          "11217"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN",
+          "64508",
+          "80",
+          "PRITING OF POSTERS",
+          "11217"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN",
+          "64509",
+          "5000",
+          "FLYERS",
+          "11217"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN",
+          "64510",
+          "3000",
+          "CUSTOMIZED BIROS",
+          "11217"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN",
+          "64511",
+          "40",
+          "DUSTERS",
+          "11217"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN",
+          "64512",
+          "24",
+          "MEDIUM SIZE MAGNETIC BOARD (4X3FT SIZE) AND STANDS",
+          "11217"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN",
+          "64513",
+          "50",
+          "MAKERS",
+          "11217"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN",
+          "64514",
+          "100",
+          "COVID-19 MATERIALS SANITIZER (200ML)",
+          "11217"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN",
+          "64515",
+          "210",
+          "COVID-19 MATERIALS FACE MASKES",
+          "11217"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN",
+          "64516",
+          "48",
+          "ROLL-UP BANNERS",
+          "11217"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN",
+          "64517",
+          "4000",
+          "CERTIFICATES",
+          "11217"
+        ],
+        [
+          "11217",
+          "ocds-gyl66f-123031011-000059",
+          "ocds-gyl66f-123031011-000059-2024-09-09T15:09:00Z",
+          "PRINTING OF NICO CUSTOMIZED EXERCISE BOOKS/POSTERS",
+          "2020-10-12T00:00:00Z",
+          "10000000",
+          "NGN",
+          "64518",
+          "3",
+          "PROJECTOR SCREENS",
+          "11217"
+        ]
+      ],
+      "status": "ok",
+      "requestedBy": "critic"
+    }
+  ],
+  "modelCalls": [
+    {
+      "role": "planner",
+      "requestedModel": "nvidia/nemotron-3-ultra-550b-a55b",
+      "returnedModel": "nvidia/nemotron-3-ultra-550b-a55b",
+      "latencyMs": 28345,
+      "maxTokens": 4096,
+      "tokens": 3714,
+      "receiptOrRunId": "chatcmpl-wupnhdsrmvntfm22",
+      "status": "ok",
+      "output": "The user wants a JSON plan for comparing federal constituency project exercise-book contracts with Oyo state contracts, including CPI adjustment, twin-award check, and leaf-matched follow-up. I need to create a plan with steps and list the tools needed.\n\nLooking at the available tools:\n- searchFederalBookContracts: to find federal contracts\n- getFederalBookContractItems: to get details of federal contracts\n- getLeafMatchedComparison: for leaf-matched comparison (likely comparing specs)\n- searchOyoBookContracts: to find Oyo state contracts\n- getNigeriaCpi: for CPI data\n- getCrossPublisherSuppliers: for cross-publisher supplier analysis\n\nI need to plan steps covering:\n1. Search federal contracts\n2. Search Oyo contracts\n3. Get contract items/details\n4. CPI adjustment\n5. Twin-award check\n6. Leaf-matched comparison\n7. Cross-publisher supplier check\n\nI'll write a fresh JSON plan with steps and a tools array.</think>{\n  \"plan\": [\n    {\n      \"step\": 1,\n      \"name\": \"search_federal_contracts\",\n      \"description\": \"Retrieve federal constituency project exercise-book contracts\",\n      \"tool\": \"searchFederalBookContracts\",\n      \"parameters\": {\n        \"year_range\": \"2020-2024\",\n        \"spec_filters\": [\"leaves\", \"gsm\", \"cover_type\"]\n      },\n      \"outputs\": [\"contract_id\", \"constituency\", \"state\", \"award_year\", \"supplier\", \"quantity\", \"total_value\", \"spec_summary\"]\n    },\n    {\n      \"step\": 2,\n      \"name\": \"search_oyo_contracts\",\n      \"description\": \"Retrieve Oyo state exercise-book procurement contracts\",\n      \"tool\": \"searchOyoBookContracts\",\n      \"parameters\": {\n        \"year_range\": \"2020-2024\",\n        \"spec_filters\": [\"leaves\", \"gsm\", \"cover_type\"]\n      },\n      \"outputs\": [\"contract_id\", \"award_year\", \"supplier\", \"quantity\", \"total_value\", \"spec_summary\"]\n    },\n    {\n      \"step\": 3,\n      \"name\": \"get_federal_items\",\n      \"description\": \"Fetch detailed line items for federal contracts\",\n      \"tool\": \"getFederalBookContractItems\",\n      \"parameters\": {\n        \"contract_ids\": \"from_step_1\"\n      },\n      \"outputs\": [\"contract_id\", \"item_id\", \"leaves\", \"gsm\", \"cover_type\", \"size\", \"binding\", \"unit_price\", \"quantity\"]\n    },\n    {\n      \"step\": 4,\n      \"name\": \"get_oyo_items\",\n      \"description\": \"Fetch detailed line items for Oyo contracts\",\n      \"tool\": \"searchOyoBookContracts\",\n      \"parameters\": {\n        \"contract_ids\": \"from_step_2\",\n        \"include_items\": true\n      },\n      \"outputs\": [\"contract_id\", \"item_id\", \"leaves\", \"gsm\", \"cover_type\", \"size\", \"binding\", \"unit_price\", \"quantity\"]\n    },\n    {\n      \"step\": 5,\n      \"name\": \"standardize_specs\",\n      \"description\": \"Normalize specifications into comparable tiers\",\n      \"rule\": \"Create spec_key = leaves|gsm|cover_type|size|binding; group by spec_key\"\n    },\n    {\n      \"step\": 6,\n      \"name\": \"cpi_adjustment\",\n      \"description\": \"Adjust all unit prices to constant 2024 NGN\",\n      \"tool\": \"getNigeriaCpi\",\n      \"parameters\": {\n        \"years\": \"2020-2024\"\n      },\n      \"calculation\": \"real_price_2024 = nominal_price * (CPI_2024 / CPI_award_year)\"\n    },\n    {\n      \"step\": 7,\n      \"name\": \"deduplicate\",\n      \"description\": \"Remove duplicate contract lines\",\n      \"keys\": [\"contract_id\", \"item_id\", \"supplier\", \"spec_key\", \"quantity\", \"unit_price\"],\n      \"rule\": \"Keep first; log duplicates\"\n    },\n    {\n      \"step\": 8,\n      \"name\": \"twin_award_check\",\n      \"description\": \"Flag twin awards: same spec, year, constituency/state, similar quantity/price to different suppliers\",\n      \"match_fields\": [\"jurisdiction\", \"award_year\", \"spec_key\"],\n      \"tolerances\": {\n        \"quantity_pct\": 5,\n        \"price_pct\": 10\n      },\n      \"output\": \"twin_group_id, twin_flag\"\n    },\n    {\n      \"step\": 9,\n      \"name\": \"benchmark_comparison\",\n      \"description\": \"Compare federal vs Oyo median real prices by spec_key and year\",\n      \"group_by\": [\"spec_key\", \"award_year\", \"jurisdiction\"],\n      \"metrics\": [\"median_real_price_2024\", \"p25\", \"p75\", \"count\"],\n      \"output\": \"price_gap_pct, fairness_flag\"\n    },\n    {\n      \"step\": 10,\n      \"name\": \"leaf_matched_followup\",\n      \"description\": \"Run leaf-matched comparison for closest spec pairs across jurisdictions\",\n      \"tool\": \"getLeafMatchedComparison\",\n      \"parameters\": {\n        \"federal_items\": \"from_step_3\",\n        \"oyo_items\": \"from_step_4\",\n        \"match_on\": [\"leaves\", \"gsm\", \"cover_type\"],\n        \"tolerance\": \"exact\"\n      },\n      \"output\": \"matched_pairs, price_diff_pct, notes\"\n    },\n    {\n      \"step\": 11,\n      \"name\": \"cross_publisher_supplier_check\",\n      \"description\": \"Identify suppliers appearing in both federal and Oyo awards\",\n      \"tool\": \"getCrossPublisherSuppliers\",\n      \"parameters\": {\n        \"federal_suppliers\": \"from_step_1\",\n        \"oyo_suppliers\": \"from_step_2\"\n      },\n      \"output\": \"common_suppliers, contract_counts, value_share\"\n    }\n  ],\n  \"tools\": [\n    \"searchFederalBookContracts\",\n    \"getFederalBookContractItems\",\n    \"getLeafMatchedComparison\",\n    \"searchOyoBookContracts\",\n    \"getNigeriaCpi\",\n    \"getCrossPublisherSuppliers\"\n  ]\n}"
+    },
+    {
+      "role": "data-agent",
+      "requestedModel": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "returnedModel": null,
+      "latencyMs": 22191,
+      "maxTokens": 2048,
+      "status": "retry",
+      "error": "provider_error {\"error\":{\"message\":\"/nemotron-3.5-lightning-30b-a3b_empty_response\",\"type\":\"api_error\",\"code\":\"provider_error\",\"param\":null,\"meterless_detail\":\"nvidia/nemotron-3.5-lightning-30b-a3b_empty_response\"},\"meterless\":{\"request_id\":\"chatcmpl-eet0",
+      "output": "{\n  \"tools\": [\n    \"searchFederalBookContracts\",\n    \"getFederalBookContractItems\",\n    \"searchOyoBookContracts\",\n    \"getNigeriaCpi\",\n    \"getCrossPublisherSuppliers\"\n  ]\n}"
+    },
+    {
+      "role": "data-agent",
+      "requestedModel": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "returnedModel": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "latencyMs": 18613,
+      "maxTokens": 4096,
+      "tokens": 4976,
+      "receiptOrRunId": "chatcmpl-4wusb93imvntgp0v",
+      "status": "retry",
+      "retryReason": "empty_response_or_provider_error",
+      "output": "{\n  \"tools\": [\n    \"searchFederalBookContracts\",\n    \"getFederalBookContractItems\",\n    \"searchOyoBookContracts\",\n    \"getNigeriaCpi\",\n    \"getCrossPublisherSuppliers\"\n  ]\n}"
+    },
+    {
+      "role": "classifier-critic",
+      "requestedModel": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "returnedModel": null,
+      "latencyMs": 26479,
+      "maxTokens": 2048,
+      "status": "retry",
+      "error": "provider_error {\"error\":{\"message\":\"/nemotron-3.5-lightning-30b-a3b_empty_response\",\"type\":\"api_error\",\"code\":\"provider_error\",\"param\":null,\"meterless_detail\":\"nvidia/nemotron-3.5-lightning-30b-a3b_empty_response\"},\"meterless\":{\"request_id\":\"chatcmpl-jgh8"
+    },
+    {
+      "role": "classifier-critic",
+      "requestedModel": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "returnedModel": null,
+      "latencyMs": 36744,
+      "maxTokens": 4096,
+      "status": "retry",
+      "retryReason": "empty_response_or_provider_error",
+      "error": "provider_error {\"error\":{\"message\":\"/nemotron-3.5-lightning-30b-a3b_empty_response\",\"type\":\"api_error\",\"code\":\"provider_error\",\"param\":null,\"meterless_detail\":\"nvidia/nemotron-3.5-lightning-30b-a3b_empty_response\"},\"meterless\":{\"request_id\":\"chatcmpl-v04t"
+    },
+    {
+      "role": "defence-critic",
+      "requestedModel": "nvidia/nemotron-3-ultra-550b-a55b",
+      "returnedModel": "nvidia/nemotron-3-ultra-550b-a55b",
+      "latencyMs": 32353,
+      "maxTokens": 4096,
+      "tokens": 12092,
+      "receiptOrRunId": "chatcmpl-whxl9kc5mvntiodp",
+      "status": "ok",
+      "output": "The user wants me to act as a defence critic and review the deterministic leads. I need to return a JSON array with leadId, disposition (stand, downgrade, or withdraw), and reason. \n\nKey instructions:\n1. If the price-gap lead does not have a leaf-matched comparison, I MUST request it with needs: {tool:\"getLeafMatchedComparison\",params:{leafCounts:[20,40,60,80,100]}}\n2. If a lead is explained by duplicate release or invalid evidence, withdraw it.\n3. Otherwise downgrade when specifications, distribution, or lot scale remain unresolved.\n4. Do not calculate numbers.\n\nLooking at the input, the leafMatchedComparison is null. The price-gap lead has arithmetic note: \"No shared leaf count was available, so the all-book comparison is downgraded and not treated as like-for-like.\" The challenge prompt asks: \"Could leaves, cover, colour, delivery, or school distribution explain the adjusted price gap?\"\n\nThe federal contracts have leaves: [20,40,60,80], [60,80,100], [60,80,100], [20,40,60], [20,40,60,80], and some with empty leaves. Oyo contracts have leaves: [80], [80], [80], [80], [80], [80], [80], [60], [60], [60], [60], [60], [60], [60], [60], [60], and some with empty leaves.\n\nShared leaf counts: 60 and 80 appear in both federal and Oyo contracts. Federal contracts with 60,80 leaves: ocds-gyl66f-539001003-002244/17018 (60,80,100), ocds-gyl66f-539001003-002381/15613 (60,80,100), ocds-gyl66f-539001003-002278/17047 (20,40,60,80). Oyo contracts with 60 leaves: many lots. Oyo contracts with 80 leaves: many lots.\n\nSo there ARE shared leaf counts (60 and 80). The arithmetic note says \"No shared leaf count was available\" but that appears incorrect based on the evidence. However, the leafMatchedComparison is null, meaning it hasn't been computed. According to instructions: \"If the price-gap lead does not have a leaf-matched comparison, you MUST request it with needs: {tool:\"getLeafMatchedComparison\",params:{leafCounts:[20,40,60,80,100]}}\"\n\nThus I must request the leaf-matched comparison for the price-gap lead.\n\nFor the twin-award lead: two federal contracts same date (2024-10-15), same quantity (8,200), near-identical values (0.327% difference). Specifications nearly identical: both have 60,80,100 leaves. Titles differ: \"TUDUN/S\" vs \"GALADIMAWA II\". This appears to be separate lots for different locations. The challenge prompt: \"Could these be separate lots or releases with the same specification and an ordinary procurement explanation?\" Yes, likely separate lots for different school clusters. No evidence of duplicate release. So disposition: downgrade.\n\nBut wait: I need to check if there's any duplicate release evidence. The evidence shows two distinct contracts with different titles (different locations). They could be separate lots. The instruction: \"If a lead is explained by duplicate release or invalid evidence, withdraw it.\" This doesn't appear to be duplicate release; they're separate contracts for different locations. So downgrade.\n\nNow for the price-gap lead: Since leafMatchedComparison is null, I must request it. I should not assign a disposition yet? The instruction says: \"If the price-gap lead does not have a leaf-matched comparison, you MUST request it with needs: {tool:\"getLeafMatchedComparison\",params:{leafCounts:[20,40,60,80,100]}}\". It doesn't say to also give a disposition. But the output format expects a JSON array with leadId, disposition, reason. However, the prior vetted answer shows that when leafMatchedComparison is null, they requested it via needs field. But the output format in the system prompt says \"Return a JSON array, one object per lead, with leadId, disposition (stand, downgrade, or withdraw), reason.\" It doesn't mention needs. However, the prior vetted answer includes a needs field in the response? Let's check the prior vetted answer: In the first prior answer, they returned a JSON array with leadId, disposition, reason. No needs field. But the instruction says \"you MUST request it with needs: {tool:\"getLeafMatchedComparison\",params:{leafCounts:[20,40,60,80,100]}}\". That suggests the response should include a needs field for that lead. But the system prompt says \"Return a JSON array, one object per lead, with leadId, disposition (stand, downgrade, or withdraw), reason.\" It doesn't mention needs. However, the prior vetted answer (the first one) shows they didn't include needs because leafMatchedComparison was provided. In the second prior answer, they didn't have leafMatchedComparison? Actually the second prior answer's input had leafMatchedComparison: null? Let's check: The second prior answer's input: \"leafMatchedComparison\":null. And the assistant's response was a JSON array with leadId, challenge, disposition. No needs field. But the instruction in the system prompt for this task says: \"If the price-gap lead does not have a leaf-matched comparison, you MUST request it with needs: {tool:\"getLeafMatchedComparison\",params:{leafCounts:[20,40,60,80,100]}}\". This is a specific instruction for this task. The prior vetted answers may not have followed that because the instruction might be new. I should follow the current instruction.\n\nThus for the price-gap lead, I need to include a needs field in its object? The instruction says \"request it with needs: {tool:\"getLeafMatchedComparison\",params:{leafCounts:[20,40,60,80,100]}}\". That suggests the object for that lead should have a needs field. But the output format says \"with leadId, disposition (stand, downgrade, or withdraw), reason.\" It doesn't mention needs. However, the instruction is explicit: \"you MUST request it with needs: ...\". I think I should include a needs field in the object for that lead, and perhaps set disposition to \"downgrade\" or something? But the instruction says \"If the price-gap lead does not have a leaf-matched comparison, you MUST request it\". It doesn't say to assign a disposition. But the output requires disposition. I could set disposition to \"downgrade\" and include needs. Or maybe the needs is a separate top-level field? The prior vetted answer didn't have needs. Let's examine the first prior answer: The input had leafMatchedComparison provided (not null). The assistant didn't request. The second prior answer: input had leafMatchedComparison: null. The assistant didn't request either; they just gave dispositions. But the current instruction explicitly says to request it. I must follow the current instruction.\n\nThus I will include a needs field in the price-gap lead object. The disposition could be \"downgrade\" pending the comparison? But the instruction: \"Otherwise downgrade when specifications, distribution, or lot scale remain unresolved.\" Since we don't have leaf-matched comparison, specifications remain unresolved. So downgrade is appropriate. I'll include needs.\n\nFor the twin-award lead, no needs needed.\n\nLet's craft the response.\n\nPrice-gap lead: leadId: \"price-gap-federal-vs-oyo\", disposition: \"downgrade\", reason: \"Leaf-matched comparison not yet available; shared leaf counts (60, 80) exist but specifications (cover, colour, paper), distribution scope (federal: selected schools in specific LGAs/constituencies; Oyo: state-wide secondary schools), and lot scale (federal: 8k–74k; Oyo: 200k+ per lot) remain unresolved. Federal titles include \\\"PRINTING AND SUPPLY\\\" and \\\"SUPPLY AND DISTRIBUTION\\\" while Oyo titles describe procurement only. These factors could legitimately explain a substantial portion of the gap.\", needs: {tool:\"getLeafMatchedComparison\",params:{leafCounts:[20,40,60,80,100]}}.\n\nTwin-award lead: leadId: \"twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613\", disposition: \"downgrade\", reason: \"Two contracts on same date (2024-10-15) with identical quantities (8,200) and near-identical specifications (60, 80, 100 leaves) but different delivery locations (\\\"TUDUN/S\\\" vs \\\"GALADIMAWA II\\\"). This is consistent with separate lots for distinct school clusters within a constituency, each tendered or awarded in parallel. The 0.33% value difference falls within normal rounding or minor spec variance (e.g., cover weight, delivery distance). No evidence suggests duplicate payment.\"\n\nNow output as JSON array.</think>[\n  {\n    \"leadId\": \"price-gap-federal-vs-oyo\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"Leaf-matched comparison not yet available; shared leaf counts (60, 80) exist but specifications (cover, colour, paper), distribution scope (federal: selected schools in specific LGAs/constituencies; Oyo: state-wide secondary schools), and lot scale (federal: 8k–74k; Oyo: 200k+ per lot) remain unresolved. Federal titles include \\\"PRINTING AND SUPPLY\\\" and \\\"SUPPLY AND DISTRIBUTION\\\" while Oyo titles describe procurement only. These factors could legitimately explain a substantial portion of the gap.\",\n    \"needs\": {\n      \"tool\": \"getLeafMatchedComparison\",\n      \"params\": {\n        \"leafCounts\": [20, 40, 60, 80, 100]\n      }\n    }\n  },\n  {\n    \"leadId\": \"twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"Two contracts on same date (2024-10-15) with identical quantities (8,200) and near-identical specifications (60, 80, 100 leaves) but different delivery locations (\\\"TUDUN/S\\\" vs \\\"GALADIMAWA II\\\"). This is consistent with separate lots for distinct school clusters within a constituency, each tendered or awarded in parallel. The 0.33% value difference falls within normal rounding or minor spec variance (e.g., cover weight, delivery distance). No evidence suggests duplicate payment.\"\n  }\n]"
+    },
+    {
+      "role": "defence-critic",
+      "requestedModel": "nvidia/nemotron-3-ultra-550b-a55b",
+      "returnedModel": "nvidia/nemotron-3-ultra-550b-a55b",
+      "latencyMs": 18678,
+      "maxTokens": 4096,
+      "tokens": 12839,
+      "receiptOrRunId": "chatcmpl-2w1w3j16mvntjh2k",
+      "status": "ok",
+      "output": "The user wants me to act as a defence critic and review the deterministic leads. I need to return a JSON array with leadId, disposition (stand, downgrade, or withdraw), and reason. \n\nKey instructions:\n1. If the price-gap lead does not have a leaf-matched comparison, I MUST request it with needs: {tool:\"getLeafMatchedComparison\",params:{leafCounts:[20,40,60,80,100]}}\n2. If a lead is explained by duplicate release or invalid evidence, withdraw it.\n3. Otherwise downgrade when specifications, distribution, or lot scale remain unresolved.\n4. Do not calculate numbers.\n\nLooking at the input, there IS a leafMatchedComparison provided in the input data. It shows matchedLeafCounts [60,80] with federal and Oyo medians for those leaf counts. The federal median is 2953.57 NGN/book and Oyo median is 572.09 NGN/book, ratio 5.16x. So the leaf-matched comparison exists.\n\nNow I need to evaluate each lead:\n\n1. **price-gap-federal-vs-oyo**: The leaf-matched comparison shows a 5.16x gap on matched leaves 60 and 80. The challenge prompt asks: \"Could leaves, cover, colour, delivery, or school distribution explain the adjusted price gap?\" \n\nLooking at the evidence:\n- Federal contracts: various leaf counts (20,40,60,80,100), quantities 8,200 to 74,000, years 2021-2024. Some titles include \"PRINTING AND SUPPLY\", \"SUPPLY AND DISTRIBUTION\". Locations: Anambra, Tudun/S, Galadimawa II, Edo, Lagos, Katsina.\n- Oyo contracts: mostly 60 or 80 leaves, very large quantities (200,000+), from 2019-2022. Titles: \"procurement of X copies of Y leaves of customized exercise books for students of public secondary schools\". \n\nDifferences:\n- Scale: Oyo lots are 200k+ each, federal are 8k-74k. Economies of scale.\n- Distribution: Federal titles often say \"PRINTING AND SUPPLY\" or \"SUPPLY AND DISTRIBUTION\" to selected schools in specific LGAs/constituencies. Oyo titles say \"procurement of... for students of public secondary schools\" - may not include distribution to schools.\n- Specifications: Both are \"customized exercise books\". Federal includes 100-leaf books (not in Oyo matched set). Cover, paper quality, colour printing not specified.\n- Years: Federal 2021-2024, Oyo 2019-2022 (but CPI adjusted to 2025).\n- Geographic spread: Federal to specific constituencies/LGAs across multiple states. Oyo state-wide secondary schools.\n\nThe leaf-matched comparison already matches on leaves 60 and 80. The gap remains 5.16x. The challenge asks if leaves, cover, colour, delivery, or school distribution could explain. Distribution is a key factor: federal contracts explicitly include supply/distribution to selected schools, while Oyo may be just procurement (printing) without distribution. Also lot scale differs massively. These are plausible innocent explanations. So disposition: downgrade.\n\n2. **twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613**: Two federal contracts same date (2024-10-15), same quantity (8,200), near-identical values (0.327% difference). Specifications nearly identical: both have 60,80,100 leaves. Titles differ: \"TUDUN/S\" vs \"GALADIMAWA II\". \n\nChallenge prompt: \"Could these be separate lots or releases with the same specification and an ordinary procurement explanation?\" \n\nYes, they appear to be separate lots for different locations (Tudun/S vs Galadimawa II). Different delivery destinations. Could be separate procurement processes for different school clusters. No evidence of duplicate release. So disposition: downgrade.\n\nNow, the instruction says: \"If the price-gap lead does not have a leaf-matched comparison, you MUST request it with needs: {tool:\"getLeafMatchedComparison\",params:{leafCounts:[20,40,60,80,100]}}\". But the leaf-matched comparison IS provided in the input. So I don't need to request it.\n\nI should return a JSON array with both leads, each with leadId, disposition, reason.\n\nLet me craft the reasons based on the above analysis.</think>[\n  {\n    \"leadId\": \"price-gap-federal-vs-oyo\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"The leaf-matched comparison (60 and 80 leaves) shows a 5.16× gap after CPI adjustment. However, federal contracts are small lots (8k–74k books) with explicit distribution to scattered schools across multiple states, while Oyo contracts are massive lots (200k+ each) for state-wide secondary schools with no clear distribution component. Differences in economies of scale, delivery scope, geographic dispersion, and possible specification variances (cover weight, paper, colour) remain unresolved and could legitimately explain much of the gap.\"\n  },\n  {\n    \"leadId\": \"twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"The two awards share the same date, quantity, and near-identical specifications (60/80/100 leaves) but reference distinct locations (Tudun/S vs Galadimawa II). This is consistent with separate lots for different school clusters or wards within a constituency, each tendered or awarded in parallel. The 0.33% value difference falls within normal rounding or minor spec variance (e.g., delivery distance). No evidence suggests duplicate payment or release.\"\n  }\n]"
+    },
+    {
+      "role": "reporter",
+      "requestedModel": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "returnedModel": null,
+      "latencyMs": 30886,
+      "maxTokens": 2048,
+      "status": "retry",
+      "error": "provider_error {\"error\":{\"message\":\"/nemotron-3.5-lightning-30b-a3b_empty_response\",\"type\":\"api_error\",\"code\":\"provider_error\",\"param\":null,\"meterless_detail\":\"nvidia/nemotron-3.5-lightning-30b-a3b_empty_response\"},\"meterless\":{\"request_id\":\"chatcmpl-501l"
+    },
+    {
+      "role": "reporter",
+      "requestedModel": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "returnedModel": null,
+      "latencyMs": 46482,
+      "maxTokens": 4096,
+      "status": "retry",
+      "retryReason": "empty_response_or_provider_error",
+      "error": "provider_error {\"error\":{\"message\":\"/nemotron-3.5-lightning-30b-a3b_empty_response\",\"type\":\"api_error\",\"code\":\"provider_error\",\"param\":null,\"meterless_detail\":\"nvidia/nemotron-3.5-lightning-30b-a3b_empty_response\"},\"meterless\":{\"request_id\":\"chatcmpl-f6o4"
+    }
+  ],
+  "modelOutputs": {
+    "planner": "The user wants a JSON plan for comparing federal constituency project exercise-book contracts with Oyo state contracts, including CPI adjustment, twin-award check, and leaf-matched follow-up. I need to create a plan with steps and list the tools needed.\n\nLooking at the available tools:\n- searchFederalBookContracts: to find federal contracts\n- getFederalBookContractItems: to get details of federal contracts\n- getLeafMatchedComparison: for leaf-matched comparison (likely comparing specs)\n- searchOyoBookContracts: to find Oyo state contracts\n- getNigeriaCpi: for CPI data\n- getCrossPublisherSuppliers: for cross-publisher supplier analysis\n\nI need to plan steps covering:\n1. Search federal contracts\n2. Search Oyo contracts\n3. Get contract items/details\n4. CPI adjustment\n5. Twin-award check\n6. Leaf-matched comparison\n7. Cross-publisher supplier check\n\nI'll write a fresh JSON plan with steps and a tools array.</think>{\n  \"plan\": [\n    {\n      \"step\": 1,\n      \"name\": \"search_federal_contracts\",\n      \"description\": \"Retrieve federal constituency project exercise-book contracts\",\n      \"tool\": \"searchFederalBookContracts\",\n      \"parameters\": {\n        \"year_range\": \"2020-2024\",\n        \"spec_filters\": [\"leaves\", \"gsm\", \"cover_type\"]\n      },\n      \"outputs\": [\"contract_id\", \"constituency\", \"state\", \"award_year\", \"supplier\", \"quantity\", \"total_value\", \"spec_summary\"]\n    },\n    {\n      \"step\": 2,\n      \"name\": \"search_oyo_contracts\",\n      \"description\": \"Retrieve Oyo state exercise-book procurement contracts\",\n      \"tool\": \"searchOyoBookContracts\",\n      \"parameters\": {\n        \"year_range\": \"2020-2024\",\n        \"spec_filters\": [\"leaves\", \"gsm\", \"cover_type\"]\n      },\n      \"outputs\": [\"contract_id\", \"award_year\", \"supplier\", \"quantity\", \"total_value\", \"spec_summary\"]\n    },\n    {\n      \"step\": 3,\n      \"name\": \"get_federal_items\",\n      \"description\": \"Fetch detailed line items for federal contracts\",\n      \"tool\": \"getFederalBookContractItems\",\n      \"parameters\": {\n        \"contract_ids\": \"from_step_1\"\n      },\n      \"outputs\": [\"contract_id\", \"item_id\", \"leaves\", \"gsm\", \"cover_type\", \"size\", \"binding\", \"unit_price\", \"quantity\"]\n    },\n    {\n      \"step\": 4,\n      \"name\": \"get_oyo_items\",\n      \"description\": \"Fetch detailed line items for Oyo contracts\",\n      \"tool\": \"searchOyoBookContracts\",\n      \"parameters\": {\n        \"contract_ids\": \"from_step_2\",\n        \"include_items\": true\n      },\n      \"outputs\": [\"contract_id\", \"item_id\", \"leaves\", \"gsm\", \"cover_type\", \"size\", \"binding\", \"unit_price\", \"quantity\"]\n    },\n    {\n      \"step\": 5,\n      \"name\": \"standardize_specs\",\n      \"description\": \"Normalize specifications into comparable tiers\",\n      \"rule\": \"Create spec_key = leaves|gsm|cover_type|size|binding; group by spec_key\"\n    },\n    {\n      \"step\": 6,\n      \"name\": \"cpi_adjustment\",\n      \"description\": \"Adjust all unit prices to constant 2024 NGN\",\n      \"tool\": \"getNigeriaCpi\",\n      \"parameters\": {\n        \"years\": \"2020-2024\"\n      },\n      \"calculation\": \"real_price_2024 = nominal_price * (CPI_2024 / CPI_award_year)\"\n    },\n    {\n      \"step\": 7,\n      \"name\": \"deduplicate\",\n      \"description\": \"Remove duplicate contract lines\",\n      \"keys\": [\"contract_id\", \"item_id\", \"supplier\", \"spec_key\", \"quantity\", \"unit_price\"],\n      \"rule\": \"Keep first; log duplicates\"\n    },\n    {\n      \"step\": 8,\n      \"name\": \"twin_award_check\",\n      \"description\": \"Flag twin awards: same spec, year, constituency/state, similar quantity/price to different suppliers\",\n      \"match_fields\": [\"jurisdiction\", \"award_year\", \"spec_key\"],\n      \"tolerances\": {\n        \"quantity_pct\": 5,\n        \"price_pct\": 10\n      },\n      \"output\": \"twin_group_id, twin_flag\"\n    },\n    {\n      \"step\": 9,\n      \"name\": \"benchmark_comparison\",\n      \"description\": \"Compare federal vs Oyo median real prices by spec_key and year\",\n      \"group_by\": [\"spec_key\", \"award_year\", \"jurisdiction\"],\n      \"metrics\": [\"median_real_price_2024\", \"p25\", \"p75\", \"count\"],\n      \"output\": \"price_gap_pct, fairness_flag\"\n    },\n    {\n      \"step\": 10,\n      \"name\": \"leaf_matched_followup\",\n      \"description\": \"Run leaf-matched comparison for closest spec pairs across jurisdictions\",\n      \"tool\": \"getLeafMatchedComparison\",\n      \"parameters\": {\n        \"federal_items\": \"from_step_3\",\n        \"oyo_items\": \"from_step_4\",\n        \"match_on\": [\"leaves\", \"gsm\", \"cover_type\"],\n        \"tolerance\": \"exact\"\n      },\n      \"output\": \"matched_pairs, price_diff_pct, notes\"\n    },\n    {\n      \"step\": 11,\n      \"name\": \"cross_publisher_supplier_check\",\n      \"description\": \"Identify suppliers appearing in both federal and Oyo awards\",\n      \"tool\": \"getCrossPublisherSuppliers\",\n      \"parameters\": {\n        \"federal_suppliers\": \"from_step_1\",\n        \"oyo_suppliers\": \"from_step_2\"\n      },\n      \"output\": \"common_suppliers, contract_counts, value_share\"\n    }\n  ],\n  \"tools\": [\n    \"searchFederalBookContracts\",\n    \"getFederalBookContractItems\",\n    \"getLeafMatchedComparison\",\n    \"searchOyoBookContracts\",\n    \"getNigeriaCpi\",\n    \"getCrossPublisherSuppliers\"\n  ]\n}",
+    "data-agent": "{\n  \"tools\": [\n    \"searchFederalBookContracts\",\n    \"getFederalBookContractItems\",\n    \"searchOyoBookContracts\",\n    \"getNigeriaCpi\",\n    \"getCrossPublisherSuppliers\"\n  ]\n}",
+    "classifier-critic": "ERROR: provider_error {\"error\":{\"message\":\"/nemotron-3.5-lightning-30b-a3b_empty_response\",\"type\":\"api_error\",\"code\":\"provider_error\",\"param\":null,\"meterless_detail\":\"nvidia/nemotron-3.5-lightning-30b-a3b_empty_response\"},\"meterless\":{\"request_id\":\"chatcmpl-v04t",
+    "defence-critic": "The user wants me to act as a defence critic and review the deterministic leads. I need to return a JSON array with leadId, disposition (stand, downgrade, or withdraw), and reason. \n\nKey instructions:\n1. If the price-gap lead does not have a leaf-matched comparison, I MUST request it with needs: {tool:\"getLeafMatchedComparison\",params:{leafCounts:[20,40,60,80,100]}}\n2. If a lead is explained by duplicate release or invalid evidence, withdraw it.\n3. Otherwise downgrade when specifications, distribution, or lot scale remain unresolved.\n4. Do not calculate numbers.\n\nLooking at the input, there IS a leafMatchedComparison provided in the input data. It shows matchedLeafCounts [60,80] with federal and Oyo medians for those leaf counts. The federal median is 2953.57 NGN/book and Oyo median is 572.09 NGN/book, ratio 5.16x. So the leaf-matched comparison exists.\n\nNow I need to evaluate each lead:\n\n1. **price-gap-federal-vs-oyo**: The leaf-matched comparison shows a 5.16x gap on matched leaves 60 and 80. The challenge prompt asks: \"Could leaves, cover, colour, delivery, or school distribution explain the adjusted price gap?\" \n\nLooking at the evidence:\n- Federal contracts: various leaf counts (20,40,60,80,100), quantities 8,200 to 74,000, years 2021-2024. Some titles include \"PRINTING AND SUPPLY\", \"SUPPLY AND DISTRIBUTION\". Locations: Anambra, Tudun/S, Galadimawa II, Edo, Lagos, Katsina.\n- Oyo contracts: mostly 60 or 80 leaves, very large quantities (200,000+), from 2019-2022. Titles: \"procurement of X copies of Y leaves of customized exercise books for students of public secondary schools\". \n\nDifferences:\n- Scale: Oyo lots are 200k+ each, federal are 8k-74k. Economies of scale.\n- Distribution: Federal titles often say \"PRINTING AND SUPPLY\" or \"SUPPLY AND DISTRIBUTION\" to selected schools in specific LGAs/constituencies. Oyo titles say \"procurement of... for students of public secondary schools\" - may not include distribution to schools.\n- Specifications: Both are \"customized exercise books\". Federal includes 100-leaf books (not in Oyo matched set). Cover, paper quality, colour printing not specified.\n- Years: Federal 2021-2024, Oyo 2019-2022 (but CPI adjusted to 2025).\n- Geographic spread: Federal to specific constituencies/LGAs across multiple states. Oyo state-wide secondary schools.\n\nThe leaf-matched comparison already matches on leaves 60 and 80. The gap remains 5.16x. The challenge asks if leaves, cover, colour, delivery, or school distribution could explain. Distribution is a key factor: federal contracts explicitly include supply/distribution to selected schools, while Oyo may be just procurement (printing) without distribution. Also lot scale differs massively. These are plausible innocent explanations. So disposition: downgrade.\n\n2. **twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613**: Two federal contracts same date (2024-10-15), same quantity (8,200), near-identical values (0.327% difference). Specifications nearly identical: both have 60,80,100 leaves. Titles differ: \"TUDUN/S\" vs \"GALADIMAWA II\". \n\nChallenge prompt: \"Could these be separate lots or releases with the same specification and an ordinary procurement explanation?\" \n\nYes, they appear to be separate lots for different locations (Tudun/S vs Galadimawa II). Different delivery destinations. Could be separate procurement processes for different school clusters. No evidence of duplicate release. So disposition: downgrade.\n\nNow, the instruction says: \"If the price-gap lead does not have a leaf-matched comparison, you MUST request it with needs: {tool:\"getLeafMatchedComparison\",params:{leafCounts:[20,40,60,80,100]}}\". But the leaf-matched comparison IS provided in the input. So I don't need to request it.\n\nI should return a JSON array with both leads, each with leadId, disposition, reason.\n\nLet me craft the reasons based on the above analysis.</think>[\n  {\n    \"leadId\": \"price-gap-federal-vs-oyo\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"The leaf-matched comparison (60 and 80 leaves) shows a 5.16× gap after CPI adjustment. However, federal contracts are small lots (8k–74k books) with explicit distribution to scattered schools across multiple states, while Oyo contracts are massive lots (200k+ each) for state-wide secondary schools with no clear distribution component. Differences in economies of scale, delivery scope, geographic dispersion, and possible specification variances (cover weight, paper, colour) remain unresolved and could legitimately explain much of the gap.\"\n  },\n  {\n    \"leadId\": \"twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"The two awards share the same date, quantity, and near-identical specifications (60/80/100 leaves) but reference distinct locations (Tudun/S vs Galadimawa II). This is consistent with separate lots for different school clusters or wards within a constituency, each tendered or awarded in parallel. The 0.33% value difference falls within normal rounding or minor spec variance (e.g., delivery distance). No evidence suggests duplicate payment or release.\"\n  }\n]",
+    "reporter": "ERROR: provider_error {\"error\":{\"message\":\"/nemotron-3.5-lightning-30b-a3b_empty_response\",\"type\":\"api_error\",\"code\":\"provider_error\",\"param\":null,\"meterless_detail\":\"nvidia/nemotron-3.5-lightning-30b-a3b_empty_response\"},\"meterless\":{\"request_id\":\"chatcmpl-f6o4"
+  },
+  "criticChallenges": [
+    {
+      "role": "defence-critic",
+      "leadId": "price-gap-federal-vs-oyo",
+      "challenge": "Leaf-matched comparison not yet available; shared leaf counts (60, 80) exist but specifications (cover, colour, paper), distribution scope (federal: selected schools in specific LGAs/constituencies; Oyo: state-wide secondary schools), and lot scale (federal: 8k–74k; Oyo: 200k+ per lot) remain unresolved. Federal titles include \"PRINTING AND SUPPLY\" and \"SUPPLY AND DISTRIBUTION\" while Oyo titles describe procurement only. These factors could legitimately explain a substantial portion of the gap.",
+      "disposition": "downgrade"
+    },
+    {
+      "role": "defence-critic",
+      "leadId": "twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613",
+      "challenge": "Two contracts on same date (2024-10-15) with identical quantities (8,200) and near-identical specifications (60, 80, 100 leaves) but different delivery locations (\"TUDUN/S\" vs \"GALADIMAWA II\"). This is consistent with separate lots for distinct school clusters within a constituency, each tendered or awarded in parallel. The 0.33% value difference falls within normal rounding or minor spec variance (e.g., cover weight, delivery distance). No evidence suggests duplicate payment.",
+      "disposition": "downgrade"
+    },
+    {
+      "role": "defence-critic",
+      "leadId": "price-gap-federal-vs-oyo",
+      "challenge": "The leaf-matched comparison (60 and 80 leaves) shows a 5.16× gap after CPI adjustment. However, federal contracts are small lots (8k–74k books) with explicit distribution to scattered schools across multiple states, while Oyo contracts are massive lots (200k+ each) for state-wide secondary schools with no clear distribution component. Differences in economies of scale, delivery scope, geographic dispersion, and possible specification variances (cover weight, paper, colour) remain unresolved and could legitimately explain much of the gap.",
+      "disposition": "downgrade"
+    },
+    {
+      "role": "defence-critic",
+      "leadId": "twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613",
+      "challenge": "The two awards share the same date, quantity, and near-identical specifications (60/80/100 leaves) but reference distinct locations (Tudun/S vs Galadimawa II). This is consistent with separate lots for different school clusters or wards within a constituency, each tendered or awarded in parallel. The 0.33% value difference falls within normal rounding or minor spec variance (e.g., delivery distance). No evidence suggests duplicate payment or release.",
+      "disposition": "downgrade"
+    }
+  ],
+  "criticRequests": [
+    {
+      "leadId": "price-gap-federal-vs-oyo",
+      "tool": "getLeafMatchedComparison",
+      "params": {
+        "leafCounts": [
+          20,
+          40,
+          60,
+          80,
+          100
+        ]
+      },
+      "round": 1,
+      "status": "executed"
+    }
+  ],
+  "dispositionChanges": [
+    {
+      "leadId": "price-gap-federal-vs-oyo",
+      "disposition": "downgrade",
+      "reason": "The leaf-matched comparison (60 and 80 leaves) shows a 5.16× gap after CPI adjustment. However, federal contracts are small lots (8k–74k books) with explicit distribution to scattered schools across multiple states, while Oyo contracts are massive lots (200k+ each) for state-wide secondary schools with no clear distribution component. Differences in economies of scale, delivery scope, geographic dispersion, and possible specification variances (cover weight, paper, colour) remain unresolved and could legitimately explain much of the gap.",
+      "before": "high",
+      "after": "medium"
+    },
+    {
+      "leadId": "twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613",
+      "disposition": "downgrade",
+      "reason": "The two awards share the same date, quantity, and near-identical specifications (60/80/100 leaves) but reference distinct locations (Tudun/S vs Galadimawa II). This is consistent with separate lots for different school clusters or wards within a constituency, each tendered or awarded in parallel. The 0.33% value difference falls within normal rounding or minor spec variance (e.g., delivery distance). No evidence suggests duplicate payment or release.",
+      "before": "medium",
+      "after": "medium"
+    }
+  ],
+  "validationFailures": [],
+  "withdrawnLeads": [],
+  "supersededLeads": [
+    {
+      "leadId": "price-gap-federal-vs-oyo",
+      "memoryId": "mem-3",
+      "reason": "price includes distribution to 40 schools; justified"
+    }
+  ],
+  "finalLeads": [
+    {
+      "id": "twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613",
+      "kind": "twin-award",
+      "severity": "medium",
+      "title": "Two federal book contracts match on date and quantity with near-identical values",
+      "evidenceIds": [
+        "ocds-gyl66f-539001003-002244/17018",
+        "ocds-gyl66f-539001003-002381/15613"
+      ],
+      "arithmetic": "8,200 books on 2024-10-15; values 19688875.00 NGN and 19753375.00 NGN differ by 64500.00 NGN (0.327%).",
+      "challengePrompt": "Could these be separate lots or releases with the same specification and an ordinary procurement explanation?",
+      "whatToVerify": "Verify the lot boundaries, delivery destinations, specifications, awardees, and whether either row is a duplicate release.",
+      "sourceContracts": [
+        "ocds-gyl66f-539001003-002244/17018",
+        "ocds-gyl66f-539001003-002381/15613"
+      ]
+    }
+  ],
+  "supplierContext": [
+    {
+      "supplier": "SYMROYAL INTEGRATED NIGERIA LIMITED",
+      "bppAwards": 2,
+      "osunAwards": 1
+    },
+    {
+      "supplier": "TAMGAJ CORPORATE SERVICES LTD",
+      "bppAwards": 2,
+      "osunAwards": 1
+    },
+    {
+      "supplier": "SALFAT ULTIMATE SYNERGY LTD",
+      "bppAwards": 1,
+      "osunAwards": 1
+    },
+    {
+      "supplier": "JOELF BUILDERS GLOBAL CONCEPTS LTD",
+      "bppAwards": 1,
+      "osunAwards": 1
+    },
+    {
+      "supplier": "RAREGEODE COMPANY LIMITED",
+      "bppAwards": 1,
+      "osunAwards": 1
+    },
+    {
+      "supplier": "LARBOL SMART CHOICE LIMITED",
+      "bppAwards": 1,
+      "osunAwards": 1
+    },
+    {
+      "supplier": "TERA PICO VENTURE",
+      "bppAwards": 1,
+      "osunAwards": 1
+    }
+  ],
+  "memoryReads": [
+    {
+      "leadId": "price-gap-federal-vs-oyo",
+      "memoryId": "mem-1",
+      "supersededBy": "mem-3",
+      "content": "lead:price-gap-federal-vs-oyo Federal books-only contracts are priced above Oyo peers after CPI adjustment. No shared leaf count was available, so the all-book comparison is downgraded and not treated as like-for-like."
+    },
+    {
+      "leadId": "price-gap-federal-vs-oyo",
+      "memoryId": "mem-3",
+      "content": "lead:price-gap-federal-vs-oyo dismissed: price includes distribution to 40 schools; justified"
+    },
+    {
+      "leadId": "twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613",
+      "memoryId": "mem-2",
+      "content": "lead:twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613 Two federal book contracts match on date and quantity with near-identical values. 8,200 books on 2024-10-15; values 19688875.00 NGN and 19753375.00 NGN differ by 64500.00 NGN (0.327%)."
+    }
+  ],
+  "memoryWrites": [],
+  "leafMatchedComparison": {
+    "matchedLeafCounts": [
+      60,
+      80
+    ],
+    "federalByLeaf": {
+      "20": {
+        "median": 2533.8936284643714,
+        "count": 3,
+        "evidenceIds": [
+          "ocds-gyl66f-539001003-002448/15558",
+          "ocds-gyl66f-539001003-002160/16955",
+          "ocds-gyl66f-539001003-002278/17047"
+        ]
+      },
+      "40": {
+        "median": 3018.9569400314303,
+        "count": 4,
+        "evidenceIds": [
+          "ocds-gyl66f-539001003-002448/15558",
+          "ocds-gyl66f-539001003-002160/16955",
+          "ocds-gyl66f-539001003-002278/17047",
+          "ocds-gyl66f-517001001-000538/5856"
+        ]
+      },
+      "60": {
+        "median": 2958.4122237223955,
+        "count": 6,
+        "evidenceIds": [
+          "ocds-gyl66f-539001003-002448/15558",
+          "ocds-gyl66f-539001003-002244/17018",
+          "ocds-gyl66f-539001003-002381/15613",
+          "ocds-gyl66f-539001003-002160/16955",
+          "ocds-gyl66f-539001003-002278/17047",
+          "ocds-gyl66f-517001001-000651/5927"
+        ]
+      },
+      "80": {
+        "median": 2743.733977016821,
+        "count": 4,
+        "evidenceIds": [
+          "ocds-gyl66f-539001003-002448/15558",
+          "ocds-gyl66f-539001003-002244/17018",
+          "ocds-gyl66f-539001003-002381/15613",
+          "ocds-gyl66f-539001003-002278/17047"
+        ]
+      },
+      "100": {
+        "median": 2958.4122237223955,
+        "count": 2,
+        "evidenceIds": [
+          "ocds-gyl66f-539001003-002244/17018",
+          "ocds-gyl66f-539001003-002381/15613"
+        ]
+      }
+    },
+    "oyoByLeaf": {
+      "60": {
+        "median": 510.7947803372547,
+        "count": 8,
+        "evidenceIds": [
+          "ocds-vsryzs-31174600529/ocds-vsryzs-31174600529-2022-01-18T00:00:00.000Z",
+          "ocds-vsryzs-30331875413/ocds-vsryzs-30331875413-2022-01-18T00:00:00.000Z",
+          "ocds-vsryzs-29531138311/ocds-vsryzs-29531138311-2022-01-18T00:00:00.000Z",
+          "ocds-vsryzs-28652117723/ocds-vsryzs-28652117723-2022-01-18T00:00:00.000Z",
+          "ocds-vsryzs-27918972759/ocds-vsryzs-27918972759-2022-01-18T00:00:00.000Z",
+          "ocds-vsryzs-27021301693/ocds-vsryzs-27021301693-2022-01-18T00:00:00.000Z",
+          "ocds-vsryzs-23157792161/ocds-vsryzs-23157792161-2022-01-18T00:00:00.000Z",
+          "ocds-vsryzs-63923f49e5241343aa7acb6a06a751e7/ocds-vsryzs-63923f49e5241343aa7acb6a06a751e7-2021-01-12T15:14:54.000Z"
+        ]
+      },
+      "80": {
+        "median": 572.0901539777252,
+        "count": 7,
+        "evidenceIds": [
+          "ocds-vsryzs-37759914035/ocds-vsryzs-37759914035-2022-01-18T00:00:00.000Z",
+          "ocds-vsryzs-37159873645/ocds-vsryzs-37159873645-2022-01-18T00:00:00.000Z",
+          "ocds-vsryzs-36474270642/ocds-vsryzs-36474270642-2022-01-18T00:00:00.000Z",
+          "ocds-vsryzs-33385939489/ocds-vsryzs-33385939489-2022-01-18T00:00:00.000Z",
+          "ocds-vsryzs-32832320303/ocds-vsryzs-32832320303-2022-01-18T00:00:00.000Z",
+          "ocds-vsryzs-32227146979/ocds-vsryzs-32227146979-2022-01-18T00:00:00.000Z",
+          "ocds-vsryzs-31732767685/ocds-vsryzs-31732767685-2022-01-18T00:00:00.000Z"
+        ]
+      }
+    },
+    "federalMedian": 2953.5743255692705,
+    "oyoMedian": 572.0901539777252,
+    "ratio": 5.162777763317825,
+    "targetYear": 2025
+  },
+  "totalRunMs": 276257
+}

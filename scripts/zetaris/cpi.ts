@@ -11,7 +11,7 @@ export function buildCreateCpiRestDatabaseSql(): string {
 export function buildRegisterCpiRestTableSql(): string {
   return [
     `CREATE LIGHTNING REST TABLE ${CPI_REST_TABLE} FROM ${CPI_REST_DATASOURCE}`,
-    `REQUEST (endpoint \"${WORLD_BANK_CPI_SOURCE_URL}\", method \"GET\", response_type \"JSON\")`,
+    `REQUEST (endpoint \"${WORLD_BANK_CPI_SOURCE_URL}\", method \"GET\", response_type \"JSON\", http_encoding \"UTF-8\")`,
     "HEADER ()",
     "BODY ()",
   ].join(" ");

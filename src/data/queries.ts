@@ -1,6 +1,7 @@
 export type QueryToolName =
   | "searchFederalBookContracts"
   | "getFederalBookContractItems"
+  | "getLeafMatchedComparison"
   | "searchOyoBookContracts"
   | "getNigeriaCpi"
   | "getCrossPublisherSuppliers";
@@ -37,6 +38,19 @@ export function buildTypedQuery(name: QueryToolName): TypedQuery {
         ].join(" "),
       };
     case "getFederalBookContractItems":
+      return {
+        name,
+        limit: 2_000,
+        sql: [
+          "SELECT c.id, c.main_ocid, c.main_id, c.title, c.dateSigned, c.value_amount, c.value_currency,",
+          "i.id, i.quantity, i.description, i.contracts_id",
+          "FROM bpp_pg.bpp_contracts c",
+          "JOIN bpp_pg.bpp_contracts_items i ON i.main_ocid = c.main_ocid AND i.main_id = c.main_id AND i.contracts_id = c.id",
+          `WHERE (${FEDERAL_TITLE_FILTER})`,
+          "ORDER BY c.dateSigned DESC, c.id DESC, i.id",
+        ].join(" "),
+      };
+    case "getLeafMatchedComparison":
       return {
         name,
         limit: 2_000,
@@ -92,6 +106,7 @@ export function isKnownQueryTool(value: unknown): value is QueryToolName {
   return typeof value === "string" && [
     "searchFederalBookContracts",
     "getFederalBookContractItems",
+    "getLeafMatchedComparison",
     "searchOyoBookContracts",
     "getNigeriaCpi",
     "getCrossPublisherSuppliers",
@@ -104,8 +119,8 @@ export function buildToolSelectionPrompt(question: string, plan: string): string
     "Select only named typed tools. Never write SQL and never compute procurement numbers.",
     `Question: ${question}`,
     `Planner output: ${plan}`,
-    "Return JSON only: {\"tools\":[\"searchFederalBookContracts\",\"getFederalBookContractItems\",\"searchOyoBookContracts\",\"getNigeriaCpi\",\"getCrossPublisherSuppliers\"]}.",
-    "Use all tools needed for the replayable case.",
+    "Return JSON only: {\"tools\":[...]} using only these names: searchFederalBookContracts, getFederalBookContractItems, searchOyoBookContracts, getNigeriaCpi, getCrossPublisherSuppliers, getLeafMatchedComparison.",
+    "Choose the smallest set of tools that supports the plan. The defence critic can request getLeafMatchedComparison later.",
   ].join("\n");
 }
 
@@ -113,6 +128,7 @@ export function toolNameList(): QueryToolName[] {
   return [
     "searchFederalBookContracts",
     "getFederalBookContractItems",
+    "getLeafMatchedComparison",
     "searchOyoBookContracts",
     "getNigeriaCpi",
     "getCrossPublisherSuppliers",

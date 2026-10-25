@@ -9,6 +9,7 @@ CODEX_IDEAS_BRIEF.md
 research/IDEAS-codex.md
 .agent/
 spike/data/
+runs/.hmem/
 
 # Internal research and strategy notes (not for the public repo)
 research/

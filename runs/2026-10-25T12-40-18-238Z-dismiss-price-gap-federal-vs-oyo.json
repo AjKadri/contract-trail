@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "mode": "LIVE",
+  "action": "dismiss",
+  "leadId": "price-gap-federal-vs-oyo",
+  "reason": "price includes distribution to 40 schools; justified",
+  "previousMemoryId": "mem-1",
+  "memoryId": "mem-3",
+  "memoryWrites": [
+    {
+      "action": "create",
+      "memoryId": "mem-3",
+      "supersedes": "mem-1"
+    }
+  ]
+}

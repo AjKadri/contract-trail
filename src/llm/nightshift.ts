@@ -30,12 +30,13 @@ type ChatResponse = {
   error?: unknown;
 };
 
-type CallOptions = {
+export type CallOptions = {
   role: string;
   model: string;
   messages: Array<{ role: "system" | "user"; content: string }>;
   maxTokens: number;
   fallbackModel?: string;
+  timeoutMs?: number;
 };
 
 function modelConfig(): { baseUrl: string; token: string; fast: string; deep: string } {
@@ -75,7 +76,7 @@ async function singleCall(options: CallOptions, maxTokens: number, retryReason?:
         temperature: 0,
         max_tokens: maxTokens,
       }),
-      signal: AbortSignal.timeout(options.model === modelConfig().deep ? 60_000 : 60_000),
+      signal: AbortSignal.timeout(options.timeoutMs ?? 60_000),
     });
     const body = await response.text();
     try {
@@ -147,7 +148,7 @@ export async function callNightshift(options: CallOptions): Promise<ModelCallRes
 }
 
 export function parseJsonObject(content: string): Record<string, unknown> {
-  const fenced = content.replace(/^```(?:json)?/iu, "").replace(/```$/u, "").trim();
+  const fenced = cleanModelContent(content).replace(/^```(?:json)?/iu, "").replace(/```$/u, "").trim();
   const start = fenced.indexOf("{");
   const end = fenced.lastIndexOf("}");
   if (start < 0 || end <= start) return {};
@@ -160,7 +161,7 @@ export function parseJsonObject(content: string): Record<string, unknown> {
 }
 
 export function parseJsonArray(content: string): unknown[] {
-  const fenced = content.replace(/^```(?:json)?/iu, "").replace(/```$/u, "").trim();
+  const fenced = cleanModelContent(content).replace(/^```(?:json)?/iu, "").replace(/```$/u, "").trim();
   const start = fenced.indexOf("[");
   const end = fenced.lastIndexOf("]");
   if (start < 0 || end <= start) return [];
@@ -170,6 +171,11 @@ export function parseJsonArray(content: string): unknown[] {
   } catch {
     return [];
   }
+}
+
+function cleanModelContent(content: string): string {
+  const reasoningEnd = content.lastIndexOf("</think>");
+  return reasoningEnd >= 0 ? content.slice(reasoningEnd + "</think>".length) : content;
 }
 
 export function fastModel(): string { return modelConfig().fast; }
