@@ -1,5 +1,5 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import dotenv from "dotenv";
@@ -75,6 +75,8 @@ export type RunTrace = {
   withdrawnLeads: Array<{ leadId: string; reason: string; severityBefore: DeterministicLead["severity"] }>;
   supersededLeads: SupersededLead[];
   finalLeads: unknown[];
+  reporterOutput?: string;
+  reporterModel?: string | null;
   supplierContext: Array<{ supplier: string; bppAwards: number; osunAwards: number }>;
   leafMatchedComparison?: LeafMatchedComparison;
   memoryReads: unknown[];
@@ -84,6 +86,7 @@ export type RunTrace = {
 
 export type RunResult = { trace: RunTrace; tracePath: string; leads: DeterministicLead[]; withdrawnLeads: RunTrace["withdrawnLeads"]; supersededLeads: SupersededLead[] };
 export type DismissalResult = { leadId: string; reason: string; previousMemoryId: string; memory: MemoryRecord; tracePath: string };
+export type RunOptions = { memoryFile?: string };
 
 function asFederalContract(row: unknown[]): FederalContract { return { id: textValue(row[0]), mainOcid: textValue(row[1]), mainId: textValue(row[2]), title: textValue(row[3]), dateSigned: textValue(row[4]), value: numberValue(row[5]), currency: textValue(row[6]) }; }
 function asFederalItem(row: unknown[]): FederalItem { return { contractId: textValue(row[0]), mainOcid: textValue(row[1]), mainId: textValue(row[2]), title: textValue(row[3]), dateSigned: textValue(row[4]), value: numberValue(row[5]), currency: textValue(row[6]), itemId: textValue(row[7]), quantity: numberValue(row[8]), description: textValue(row[9]) }; }
@@ -93,6 +96,24 @@ function asCpiPoint(row: unknown[]): CpiPoint { return { year: yearOf(textValue(
 function addModelLogs(trace: RunTrace, logs: ModelCallLog[], output: string, role: string): void {
   for (const log of logs) trace.modelCalls.push({ ...log, output: log.role === role ? output : undefined });
   trace.modelOutputs[role] = output;
+}
+
+const THINKING_OFF = { enable_thinking: false };
+
+function memoryBinding(memoryFile?: string): { persistDir: string; file?: string } {
+  if (!memoryFile) return { persistDir: HMEM_DIR };
+  const file = resolve(memoryFile);
+  const persistDir = resolve(dirname(file), `.contract-trail-memory-${basename(file).replace(/[^a-z0-9._-]/giu, "-")}`);
+  mkdirSync(persistDir, { recursive: true });
+  const stateFile = join(persistDir, "state.json");
+  if (existsSync(file) && !existsSync(stateFile)) copyFileSync(file, stateFile);
+  return { persistDir, file };
+}
+
+function syncMemoryFile(binding: { persistDir: string; file?: string }): void {
+  if (!binding.file) return;
+  const stateFile = join(binding.persistDir, "state.json");
+  if (existsSync(stateFile)) copyFileSync(stateFile, binding.file);
 }
 
 async function callAndRecord(trace: RunTrace, options: CallOptions): Promise<ModelCallResult> {
@@ -147,8 +168,8 @@ function parseCriticEntries(content: string, leadIds: string[]): { decisions: Le
   return { decisions, requests, challenges };
 }
 
-function summariseForModel(contracts: PricedContract[]): string { return JSON.stringify(contracts.slice(0, 40).map((contract) => ({ evidenceId: contract.evidenceId, publisher: contract.publisher, title: contract.title, date: contract.date, quantity: contract.quantity, value: contract.value, leaves: contract.leafCounts, deflatedPricePerBook: Number(contract.deflatedPricePerBook.toFixed(2)) }))); }
-function leadsForModel(leads: DeterministicLead[], comparison?: LeafMatchedComparison): string { return JSON.stringify({ leads, leafMatchedComparison: comparison ?? null }); }
+function summariseForModel(contracts: PricedContract[]): string { return JSON.stringify(contracts.slice(0, 12).map((contract) => ({ id: contract.evidenceId, publisher: contract.publisher, title: contract.title.slice(0, 100), date: contract.date, quantity: contract.quantity, value: contract.value, leaves: contract.leafCounts, unit: Number(contract.deflatedPricePerBook.toFixed(2)) }))); }
+function leadForModel(lead: DeterministicLead, comparison?: LeafMatchedComparison): string { return JSON.stringify({ lead: { id: lead.id, kind: lead.kind, severity: lead.severity, title: lead.title, evidenceIds: lead.evidenceIds, arithmetic: lead.arithmetic, comparison: lead.comparison }, leafMatchedComparison: comparison ? { matchedLeafCounts: comparison.matchedLeafCounts, federalMedian: comparison.federalMedian, oyoMedian: comparison.oyoMedian, ratio: comparison.ratio } : null }); }
 
 function requiredEvidence(lead: DeterministicLead): QueryToolName[] { return lead.kind === "twin-award" ? ["getFederalBookContractItems"] : ["getFederalBookContractItems", "searchOyoBookContracts", "getNigeriaCpi"]; }
 
@@ -184,14 +205,16 @@ function memoryState(trace: RunTrace, hmem: HMEM, leads: DeterministicLead[]): M
   return state;
 }
 
-export function dismissLead(leadId: string, reason: string, persistDir = HMEM_DIR, traceDir = resolve(ROOT, "runs")): DismissalResult {
-  const hmem = new HMEM({ persistDir, actor: "contract-trail" });
+export function dismissLead(leadId: string, reason: string, persistDir = HMEM_DIR, traceDir = resolve(ROOT, "runs"), memoryFile?: string): DismissalResult {
+  const binding = memoryFile ? memoryBinding(memoryFile) : { persistDir, file: undefined };
+  const hmem = new HMEM({ persistDir: binding.persistDir, actor: "contract-trail" });
   const previous = leadMemoryFor(hmem, leadId);
   if (!previous) throw new Error(`No stored lead memory found for ${leadId}. Run the investigation first.`);
   const memory = hmem.add({ content: `lead:${leadId} dismissed: ${reason}`, source: `contract-trail:dismissal:${leadId}`, tags: [leadTag(leadId), "dismissal"], type: "factual", confidence: 1, supersedes: previous.id, provenance: { origin: "user_correction", learnedAt: Date.now(), label: reason } });
   mkdirSync(traceDir, { recursive: true });
   const tracePath = resolve(traceDir, `${new Date().toISOString().replace(/[.:]/gu, "-")}-dismiss-${leadId.slice(0, 32)}.json`);
   writeFileSync(tracePath, `${JSON.stringify({ version: 2, mode: "LIVE", action: "dismiss", leadId, reason, previousMemoryId: previous.id, memoryId: memory.id, memoryWrites: [{ action: "create", memoryId: memory.id, supersedes: previous.id }] }, null, 2)}\n`, "utf8");
+  syncMemoryFile(binding);
   return { leadId, reason, previousMemoryId: previous.id, memory, tracePath };
 }
 
@@ -212,15 +235,15 @@ async function runTool(trace: RunTrace, tool: QueryToolName, params: Record<stri
   }
 }
 
-async function defenceCall(trace: RunTrace, question: string, leads: DeterministicLead[], federal: PricedContract[], oyo: PricedContract[], comparison: LeafMatchedComparison | undefined, rejudge: boolean): Promise<{ decisions: LeadDisposition[]; requests: CriticRequestTrace[] }> {
-  const ids = leads.map((lead) => lead.id);
+async function defenceCall(trace: RunTrace, question: string, lead: DeterministicLead, federal: PricedContract[], oyo: PricedContract[], comparison: LeafMatchedComparison | undefined, rejudge: boolean): Promise<{ decisions: LeadDisposition[]; requests: CriticRequestTrace[] }> {
+  const ids = [lead.id];
   const result = await callAndRecord(trace, { role: "defence-critic", model: deepModel(), fallbackModel: fastModel(), maxTokens: 4096, messages: [
-    { role: "system", content: `You are the defence critic. ${rejudge ? "Re-judge after the requested typed-tool result." : "Review the deterministic leads."} Return a JSON array, one object per lead, with leadId, disposition (stand, downgrade, or withdraw), reason. If the price-gap lead does not have a leaf-matched comparison, you MUST request it with needs: {tool:"getLeafMatchedComparison",params:{leafCounts:[20,40,60,80,100]}}. If a lead is explained by duplicate release or invalid evidence, withdraw it. Otherwise downgrade when specifications, distribution, or lot scale remain unresolved. Do not calculate numbers.` },
-    { role: "user", content: `Question: ${question}\n${leadsForModel(leads, comparison)}\nFederal evidence: ${summariseForModel(federal)}\nOyo evidence: ${summariseForModel(oyo)}` },
+    { role: "system", content: `You are the defence critic. detailed thinking off. ${rejudge ? "Re-judge after the requested typed-tool result." : "Review this deterministic lead."} Return a JSON array with one object containing leadId, disposition (stand, downgrade, or withdraw), reason. If this price-gap lead lacks a leaf-matched comparison, request it with needs: {tool:"getLeafMatchedComparison",params:{leafCounts:[20,40,60,80,100]}}. If a lead is explained by duplicate release or invalid evidence, withdraw it. Otherwise downgrade when specifications, distribution, or lot scale remain unresolved. Do not calculate numbers.` },
+    { role: "user", content: `Question: ${question}\n${leadForModel(lead, comparison)}\nFederal evidence: ${summariseForModel(federal)}\nOyo evidence: ${summariseForModel(oyo)}` },
   ] });
   const parsed = parseCriticEntries(result.content, ids);
   trace.criticChallenges.push(...parsed.challenges);
-  return parsed;
+  return { ...parsed, requests: parsed.requests.map((request) => ({ ...request, leadId: request.leadId ?? lead.id })) };
 }
 
 function recompute(federalRows: unknown[][], oyoRows: unknown[][], cpiRows: unknown[][], leafRows: unknown[][] | undefined, trace: RunTrace): { federal: PricedContract[]; oyo: PricedContract[]; comparison?: LeafMatchedComparison; leads: DeterministicLead[] } {
@@ -236,22 +259,23 @@ function recompute(federalRows: unknown[][], oyoRows: unknown[][], cpiRows: unkn
 
 function saveTrace(trace: RunTrace, slug: string): string { mkdirSync(resolve(ROOT, "runs"), { recursive: true }); const path = resolve(ROOT, "runs", `${new Date().toISOString().replace(/[.:]/gu, "-")}-${slug}.json`); writeFileSync(path, `${JSON.stringify(trace, null, 2)}\n`, "utf8"); return path; }
 
-export async function runContractTrail(question = DEFAULT_QUESTION): Promise<RunResult> {
+export async function runContractTrail(question = DEFAULT_QUESTION, options: RunOptions = {}): Promise<RunResult> {
   const trace = newTrace(question);
   const started = Date.now();
   let tracePath = "";
+  const memory = memoryBinding(options.memoryFile);
   try {
-    const planner = await callAndRecord(trace, { role: "planner", model: deepModel(), fallbackModel: fastModel(), maxTokens: 4096, messages: [
-      { role: "system", content: "You are the Contract Trail planner. Do not compute numbers or decide matches. Return JSON with steps and a tools array containing only typed tool names needed for the question." },
-      { role: "user", content: `Question: ${question}\nAvailable tools: ${toolNameList().join(", ")}\nPlan the federal/Oyo price comparison, CPI, twin-award check, and a possible leaf-matched follow-up.` },
+    const planner = await callAndRecord(trace, { role: "planner", model: deepModel(), fallbackModel: fastModel(), maxTokens: 4096, chatTemplateKwargs: THINKING_OFF, messages: [
+      { role: "system", content: "You are the Contract Trail planner. detailed thinking off. Do not compute numbers or decide matches. Return JSON with steps and a tools array containing only typed tool names needed for the question." },
+      { role: "user", content: `Question: ${question}\nTools: ${toolNameList().join(", ")}\nPlan federal/Oyo price comparison, CPI, twin-award check, and a possible leaf follow-up.` },
     ] });
     trace.plan = parseJsonObject(planner.content);
     if (Object.keys(trace.plan as Record<string, unknown>).length === 0) trace.plan = planFallback();
     trace.plannerChosenTools = selectedToolsFrom(planner.content);
     trace.toolSelectionNotes.push(`planner chose ${trace.plannerChosenTools.join(", ") || "no tools"}`);
 
-    const dataAgent = await callAndRecord(trace, { role: "data-agent", model: fastModel(), maxTokens: 2048, messages: [
-      { role: "system", content: "You are a typed-tool data agent. Select named tools only. Never emit SQL, calculate numbers, or silently add tools the planner did not choose." },
+    const dataAgent = await callAndRecord(trace, { role: "data-agent", model: fastModel(), maxTokens: 4096, chatTemplateKwargs: THINKING_OFF, messages: [
+      { role: "system", content: "You are a typed-tool data agent. detailed thinking off. Select named tools only. Never emit SQL, calculate numbers, or silently add tools." },
       { role: "user", content: buildToolSelectionPrompt(question, JSON.stringify(trace.plan)) },
     ] });
     trace.selectedTools = selectedToolsFrom(dataAgent.content);
@@ -270,18 +294,27 @@ export async function runContractTrail(question = DEFAULT_QUESTION): Promise<Run
     let candidates = validateEvidence(initial.leads, trace.selectedTools, trace);
     if (candidates.length === 0) throw new Error("deterministic validation refused every lead because required evidence tools were not selected");
 
-    const classifier = await callAndRecord(trace, { role: "classifier-critic", model: fastModel(), maxTokens: 2048, messages: [
-      { role: "system", content: "You are a classifier critic. Return a JSON array of challenges. Exclude laptop or ThinkPad notebook matches and mixed-item contracts. Do not calculate or change numbers." },
-      { role: "user", content: `Question: ${question}\nFederal contract rows: ${federalContractRows.length}\nBook-only evidence: ${summariseForModel(initial.federal)}\nOyo evidence: ${summariseForModel(initial.oyo)}\nLeads: ${JSON.stringify(candidates)}` },
-    ] });
-    const classifierChallenges = parseJsonArray(classifier.content);
-    if (classifierChallenges.length > 0) trace.criticChallenges.push(...classifierChallenges.map((entry) => ({ role: "classifier-critic", challenge: JSON.stringify(entry) })));
+    await Promise.all(candidates.map(async (lead) => {
+      const result = await callAndRecord(trace, { role: "classifier-critic", model: fastModel(), maxTokens: 4096, chatTemplateKwargs: THINKING_OFF, messages: [
+        { role: "system", content: "You are a classifier critic. detailed thinking off. Return a JSON array of challenges for this lead. Exclude laptop or ThinkPad notebook matches and mixed-item contracts. Do not calculate or change numbers." },
+        { role: "user", content: `Question: ${question}\nFederal rows: ${federalContractRows.length}\nEvidence: ${summariseForModel(initial.federal)}\nOyo: ${summariseForModel(initial.oyo)}\nLead: ${leadForModel(lead, initial.comparison)}` },
+      ] });
+      const challenges = parseJsonArray(result.content);
+      if (challenges.length > 0) trace.criticChallenges.push(...challenges.map((entry) => ({ role: "classifier-critic", leadId: lead.id, challenge: JSON.stringify(entry) })));
+    }));
 
-    let defence = await defenceCall(trace, question, candidates, initial.federal, initial.oyo, initial.comparison, false);
+    const initialDefence = await Promise.all(candidates.map((lead) => defenceCall(trace, question, lead, initial.federal, initial.oyo, initial.comparison, false)));
+    const decisions = new Map<string, LeadDisposition>();
+    let pendingRequests: CriticRequestTrace[] = [];
+    for (const result of initialDefence) {
+      for (const decision of result.decisions) decisions.set(decision.leadId, decision);
+      pendingRequests.push(...result.requests);
+    }
+
     let leafRows = toolRows.get("getLeafMatchedComparison");
     const requestCounts = new Map<string, number>();
     for (let round = 1; round <= 2; round += 1) {
-      const requests = defence.requests.filter((request) => {
+      const requests = pendingRequests.filter((request) => {
         const leadKey = request.leadId ?? "all";
         const count = requestCounts.get(leadKey) ?? 0;
         if (count >= 2) {
@@ -292,6 +325,7 @@ export async function runContractTrail(question = DEFAULT_QUESTION): Promise<Run
         return true;
       });
       if (requests.length === 0) break;
+      const rejudgeIds = new Set<string>();
       for (const request of requests) {
         if (request.tool !== "getLeafMatchedComparison") {
           trace.criticRequests.push({ ...request, round, status: "rejected", reason: "tool is typed but not implemented for this replayable case" });
@@ -299,19 +333,26 @@ export async function runContractTrail(question = DEFAULT_QUESTION): Promise<Run
         }
         trace.criticRequests.push({ ...request, round, status: "executed" });
         leafRows = await runTool(trace, request.tool, request.params, "critic");
+        if (request.leadId) rejudgeIds.add(request.leadId);
       }
+      if (rejudgeIds.size === 0) break;
       const updated = recompute(federalRows, oyoRows, cpiRows, leafRows, trace);
       candidates = validateEvidence(updated.leads, trace.selectedTools.concat("getLeafMatchedComparison"), trace);
-      defence = await defenceCall(trace, question, candidates, updated.federal, updated.oyo, updated.comparison, true);
+      const rejudged = await Promise.all(candidates.filter((lead) => rejudgeIds.has(lead.id)).map((lead) => defenceCall(trace, question, lead, updated.federal, updated.oyo, updated.comparison, true)));
+      pendingRequests = [];
+      for (const result of rejudged) {
+        for (const decision of result.decisions) decisions.set(decision.leadId, decision);
+        pendingRequests.push(...result.requests);
+      }
     }
 
     const finalData = recompute(federalRows, oyoRows, cpiRows, leafRows, trace);
     candidates = validateEvidence(finalData.leads, trace.selectedTools.concat(leafRows ? ["getLeafMatchedComparison"] : []), trace);
-    const applied = applyLeadDispositions(candidates, defence.decisions);
+    const applied = applyLeadDispositions(candidates, [...decisions.values()]);
     for (const change of applied.changes) trace.dispositionChanges.push(change);
     for (const item of applied.withdrawn) trace.withdrawnLeads.push({ leadId: item.lead.id, reason: item.reason, severityBefore: item.lead.severity });
 
-    const hmem = new HMEM({ persistDir: HMEM_DIR, actor: "contract-trail" });
+    const hmem = new HMEM({ persistDir: memory.persistDir, actor: "contract-trail" });
     const memories = memoryState(trace, hmem, finalData.leads);
     const superseded = new Set<string>();
     for (const [leadId, state] of memories) if (state.dismissed) {
@@ -319,17 +360,21 @@ export async function runContractTrail(question = DEFAULT_QUESTION): Promise<Run
       trace.supersededLeads.push({ leadId, memoryId: state.dismissed.id, reason: state.dismissed.content.replace(/^.*dismissed:\s*/u, "") });
     }
     const finalLeads = applied.active.filter((lead) => !superseded.has(lead.id));
-    const reporter = await callAndRecord(trace, { role: "reporter", model: fastModel(), maxTokens: 2048, messages: [
-      { role: "system", content: "You are the Contract Trail reporter. Return JSON only. Use the deterministic lead list, severity changes, withdrawn leads, leaf comparison, and memory decisions. Call them leads to verify, never accusations." },
-      { role: "user", content: `Question: ${question}\nFinal leads: ${JSON.stringify(finalLeads)}\nWithdrawn: ${JSON.stringify(trace.withdrawnLeads)}\nSuperseded: ${JSON.stringify(trace.supersededLeads)}\nDisposition changes: ${JSON.stringify(trace.dispositionChanges)}\nCritic challenges: ${JSON.stringify(trace.criticChallenges)}` },
+    const reporter = await callAndRecord(trace, { role: "reporter", model: fastModel(), maxTokens: 4096, chatTemplateKwargs: THINKING_OFF, messages: [
+      { role: "system", content: "You are the Contract Trail reporter. detailed thinking off. Return JSON only. Use this deterministic summary and call findings leads to verify, never accusations." },
+      { role: "user", content: `Question: ${question}\nFinal leads: ${JSON.stringify(finalLeads)}\nWithdrawn: ${JSON.stringify(trace.withdrawnLeads)}\nSuperseded: ${JSON.stringify(trace.supersededLeads)}\nChanges: ${JSON.stringify(trace.dispositionChanges)}\nChallenges: ${JSON.stringify(trace.criticChallenges.slice(-12))}\nLeaf ratio: ${trace.leafMatchedComparison?.ratio ?? null}` },
     ] });
-    void reporter;
+    if (!reporter.content.trim()) throw new Error("reporter returned no model content");
+    trace.reporterOutput = reporter.content;
+    trace.reporterModel = reporter.returnedModel;
     trace.finalLeads = finalLeads;
+    syncMemoryFile(memory);
     trace.totalRunMs = Date.now() - started;
     tracePath = saveTrace(trace, question.toLowerCase().replace(/[^a-z0-9]+/gu, "-").replace(/^-|-$/gu, "").slice(0, 48) || "question");
     return { trace, tracePath, leads: finalLeads, withdrawnLeads: trace.withdrawnLeads, supersededLeads: trace.supersededLeads };
   } catch (error) {
     trace.totalRunMs = Date.now() - started;
+    syncMemoryFile(memory);
     if (!tracePath) saveTrace(trace, `${question.toLowerCase().replace(/[^a-z0-9]+/gu, "-").slice(0, 48) || "question"}-failed`);
     throw error;
   }

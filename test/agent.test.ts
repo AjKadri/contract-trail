@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -24,5 +24,17 @@ describe("M3 dismiss memory", () => {
     expect(result.memory.supersedes).toBe(old.id);
     expect(next.store.get(old.id)?.supersededBy).toBe(result.memory.id);
     expect(next.store.get(result.memory.id)?.content).toContain("price includes distribution");
+  });
+
+  it("supports an explicit memory file for a clean demo state", () => {
+    const dir = mkdtempSync(join(tmpdir(), "contract-trail-memory-file-"));
+    tempDirs.push(dir);
+    const memoryFile = join(dir, "demo-memory.json");
+    const persistDir = join(dir, ".contract-trail-memory-demo-memory.json");
+    const hmem = new HMEM({ persistDir, actor: "contract-trail" });
+    hmem.add({ content: "lead:price-gap-federal-vs-oyo Federal price gap", source: "test:lead", tags: ["lead:price-gap-federal-vs-oyo", "lead"], type: "factual" });
+    const result = dismissLead("price-gap-federal-vs-oyo", "explicit demo correction", undefined, dir, memoryFile);
+    expect(existsSync(memoryFile)).toBe(true);
+    expect(result.memory.content).toContain("explicit demo correction");
   });
 });
