@@ -104,7 +104,7 @@ function parsePriceGap(lead: Lead): PriceGap | null {
 
 function headlineFor(lead: Lead): string {
   const gap = parsePriceGap(lead);
-  if (gap) return `Federal exercise books cost ${gap.ratio.toFixed(1)}× what Oyo paid, matched on leaf count`;
+  if (gap) return "Federal vs Oyo exercise books — matched on leaf count";
   return lead.title;
 }
 
@@ -176,8 +176,8 @@ function PlanView({ value }: { value: unknown }) {
   return <div className="plan-view">
     {steps.length ? <ol className="plan-list">{steps.map((step, index) => {
       const record = step && typeof step === "object" ? step as Record<string, unknown> : {};
-      const line = [record.name, record.description].filter((part): part is string => typeof part === "string").join(" · ") || JSON.stringify(step);
-      return <li key={index}><span className="plan-number">{index + 1}</span><span>{line}</span></li>;
+      const line = ([record.name, record.description].filter((part): part is string => typeof part === "string").join(" · ") || JSON.stringify(step)).replace(/(\d)-(\d)/g, "$1‑$2");
+      return <li key={index}><span className="plan-number">{index + 1}</span><span className="plan-copy" title={line}>{line}</span></li>;
     })}</ol> : null}
     <JsonDisclosure label="show plan" value={value} />
   </div>;
@@ -241,10 +241,9 @@ function RunSummary({ trace, events, sampleMode }: { trace: Trace | null; events
   const models = trace?.modelCalls ?? events.filter((event) => event.type === "model_call").map((event) => event.data as ModelTrace);
   const criticRequests = trace?.criticRequests ?? events.filter((event) => event.type === "critic_request" && event.data.status === "executed").map((event) => event.data);
   const sources = [...new Set(tools.flatMap((tool) => dataSources(tool.sql ?? "")))];
-  const modelCounts = new Map<string, number>();
-  for (const model of models) { const name = shortModel(model.returnedModel ?? model.requestedModel); modelCounts.set(name, (modelCounts.get(name) ?? 0) + 1); }
-  const modelText = [...modelCounts.entries()].map(([model, count]) => `${model} ×${count}`).join(" · ") || "none yet";
-  return <div className="summary-strip"><div className="summary-strip-head"><p className="eyebrow">Run summary</p><span className={sampleMode ? "replayed-badge" : "live-badge"}>{sampleMode ? "REPLAYED" : "LIVE"}</span></div><div className="summary-grid"><div><strong>{tools.length}</strong><span>Zetaris queries</span></div><div><strong>{sources.length || "—"}</strong><span>data sources · {sources.join(" · ") || "awaiting query"}</span></div><div><strong>{models.length}</strong><span>Nemotron calls · {modelText}</span></div><div><strong>{criticRequests.length}</strong><span>{criticRequests.length === 1 ? "critic-requested query" : "critic-requested queries"}</span></div><div><strong>{formatDuration(trace?.totalRunMs)}</strong><span>total time</span></div></div></div>;
+  const ultraCount = models.filter((model) => shortModel(model.returnedModel ?? model.requestedModel).toLowerCase().includes("ultra")).length;
+  const lightningCount = models.filter((model) => shortModel(model.returnedModel ?? model.requestedModel).toLowerCase().includes("lightning")).length;
+  return <div className="summary-strip"><div className="summary-strip-head"><p className="eyebrow">Run summary</p><span className={sampleMode ? "replayed-badge" : "live-badge"}>{sampleMode ? "REPLAYED" : "LIVE"}</span></div><div className="summary-grid"><div><strong>{tools.length}</strong><span>Zetaris queries</span></div><div><strong>{sources.length || "—"}</strong><span>data sources · {sources.join(" · ") || "awaiting query"}</span></div><div className="summary-models"><strong>{models.length}</strong><span>Nemotron calls</span><small>{ultraCount} Ultra · {lightningCount} Lightning</small></div><div><strong>{criticRequests.length}</strong><span>{criticRequests.length === 1 ? "critic-requested query" : "critic-requested queries"}</span></div><div><strong>{formatDuration(trace?.totalRunMs)}</strong><span>total time</span></div></div></div>;
 }
 
 function Timeline({ events }: { events: TimelineEvent[] }) {
@@ -253,7 +252,11 @@ function Timeline({ events }: { events: TimelineEvent[] }) {
       const data = event.data ?? {};
       const challenge = event.type === "critic_challenge" ? challengeText(data, typeof data.leadId === "string" ? data.leadId : undefined) : null;
       const fullLeadId = typeof data.leadId === "string" ? data.leadId : undefined;
-      return <div className={`timeline-item timeline-${event.type}`} key={event.id}><span className="timeline-index">{String(event.id + 1).padStart(2, "0")}</span><div className="timeline-icon">{eventIcon(event.type)}</div><div className="timeline-content"><div className="timeline-title"><span className="timeline-main" title={fullLeadId}>{eventLabel(event)}</span><span className="timeline-metric">{eventMetric(event)}</span></div><div className="timeline-kind"><span className="timeline-source">{eventSourceLabel(event)}</span><span>{event.type.replaceAll("_", " ")}</span></div>{event.type === "tool_call" ? <details><summary>SQL · {datasource(data.sql ?? "")}</summary><pre>{data.sql}</pre></details> : null}{event.type === "model_call" ? <p className="timeline-detail">requested {shortModel(data.requestedModel)} · returned {shortModel(data.returnedModel)}{data.status ? ` · ${data.status}` : ""}</p> : null}{event.type === "critic_challenge" && challenge ? <><p className="timeline-detail"><ExpandableText text={challenge.summary} /></p>{challenge.raw ? <JsonDisclosure label="show JSON" value={challenge.raw} /> : null}</> : null}{event.type === "critic_request" ? <p className="timeline-detail"><span title={fullLeadId}>{shortLeadId(data.leadId)}</span> requested this typed query</p> : null}{event.type === "disposition" ? <p className="timeline-detail"><s>{String(data.before).toUpperCase()}</s> → <strong>{String(data.after ?? "WITHDRAWN").toUpperCase()}</strong> · {data.reason}</p> : null}{event.type === "plan" ? <PlanView value={data} /> : null}</div></div>;
+      const requestedModel = typeof data.requestedModel === "string" ? data.requestedModel : "";
+      const returnedModel = typeof data.returnedModel === "string" ? data.returnedModel : requestedModel;
+      const modelDiffers = Boolean(requestedModel && returnedModel && requestedModel !== returnedModel);
+      const modelTooltip = modelDiffers ? `requested ${requestedModel}; returned ${returnedModel}` : `requested and returned ${returnedModel}`;
+      return <div className={`timeline-item timeline-${event.type}`} key={event.id}><span className="timeline-index">{String(event.id + 1).padStart(2, "0")}</span><div className="timeline-icon">{eventIcon(event.type)}</div><div className="timeline-content">{event.type === "model_call" ? <div className="timeline-title model-call-line"><span className="timeline-main" title={modelTooltip}>{String(data.role ?? "model").toUpperCase()} · {shortModel(returnedModel)}{modelDiffers ? <span className="model-diff"> · FALLBACK</span> : null} · {formatDuration(data.latencyMs)} · {String(data.status ?? "ok").toUpperCase()}</span></div> : <><div className="timeline-title"><span className="timeline-main" title={fullLeadId}>{eventLabel(event)}</span><span className="timeline-metric">{eventMetric(event)}</span></div><div className="timeline-kind"><span className="timeline-source">{eventSourceLabel(event)}</span><span>{event.type.replaceAll("_", " ")}</span></div></>}{event.type === "tool_call" ? <details><summary>SQL · {datasource(data.sql ?? "")}</summary><pre>{data.sql}</pre></details> : null}{event.type === "critic_challenge" && challenge ? <><p className="timeline-detail"><ExpandableText text={challenge.summary} /></p>{challenge.raw ? <JsonDisclosure label="show JSON" value={challenge.raw} /> : null}</> : null}{event.type === "critic_request" ? <p className="timeline-detail"><span title={fullLeadId}>{shortLeadId(data.leadId)}</span> requested this typed query</p> : null}{event.type === "disposition" ? <p className="timeline-detail"><s>{String(data.before).toUpperCase()}</s> → <strong>{String(data.after ?? "WITHDRAWN").toUpperCase()}</strong> · {data.reason}</p> : null}{event.type === "plan" ? <PlanView value={data} /> : null}</div></div>;
     })}
     {!events.length ? <p className="empty-state">The investigation log will appear here as the case runs.</p> : null}
   </div>;
