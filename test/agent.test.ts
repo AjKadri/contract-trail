@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { HMEM } from "../src/engines/hmem/index.js";
-import { dismissLead, shouldRunCriticTool } from "../src/agents/contractTrail.js";
+import { dismissLead, mapCriticChallenges, shouldRunCriticTool } from "../src/agents/contractTrail.js";
 import { buildToolSelectionPrompt } from "../src/data/queries.js";
 
 const tempDirs: string[] = [];
@@ -46,5 +46,16 @@ describe("M3 dismiss memory", () => {
     const prompt = buildToolSelectionPrompt("book prices", "{} ");
     expect(prompt).toContain("Do not select getLeafMatchedComparison");
     expect(prompt).toMatch(/using only these names: searchFederalBookContracts, getFederalBookContractItems, searchOyoBookContracts, getNigeriaCpi, getCrossPublisherSuppliers/u);
+  });
+
+  it("maps critic challenges only when the declared leadId matches", () => {
+    const content = JSON.stringify([
+      { leadId: "price-gap-federal-vs-oyo", challenge: "price gap context" },
+      { leadId: "twin-award-1", challenge: "separate lots" },
+    ]);
+    expect(mapCriticChallenges(content, "classifier-critic", "twin-award-1")).toEqual([
+      { role: "classifier-critic", leadId: "twin-award-1", challenge: "separate lots", disposition: undefined },
+    ]);
+    expect(mapCriticChallenges(content, "classifier-critic", "twin-award-2")).toEqual([]);
   });
 });

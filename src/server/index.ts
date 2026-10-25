@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import Fastify from "fastify";
 
 import { dismissLead, DEFAULT_QUESTION, runContractTrail, type TraceEvent } from "../agents/contractTrail.js";
+import { loadRecordedTrace, replayEvents } from "../replay/sample.js";
 
 const ROOT = resolve(fileURLToPath(new URL("../../", import.meta.url)));
 const HMEM_DIR = resolve(ROOT, "runs/.hmem");
@@ -60,6 +61,15 @@ export function buildServer() {
     };
     send("status", { status: "running", question, sampleMode: process.env.SAMPLE_MODE === "true" });
     try {
+      if (process.env.SAMPLE_MODE === "true") {
+        const replay = loadRecordedTrace(process.env.SAMPLE_TRACE);
+        for (const event of replayEvents(replay.trace)) {
+          send(event.type, event.type === "tool_call" ? safeToolEvent(event) : event.data);
+          await new Promise((resolve) => setTimeout(resolve, 8));
+        }
+        send("done", { trace: replay.trace, tracePath: replay.tracePath, leads: replay.leads, withdrawnLeads: replay.withdrawnLeads, supersededLeads: replay.supersededLeads });
+        return;
+      }
       const result = await runContractTrail(question, {
         onEvent: (event) => send(event.type, event.type === "tool_call" ? safeToolEvent(event) : event.data),
       });

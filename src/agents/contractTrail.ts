@@ -58,7 +58,7 @@ export type SupersededLead = { leadId: string; memoryId: string; reason: string 
 
 export type RunTrace = {
   version: 2;
-  mode: "LIVE";
+  mode: "LIVE" | "REPLAYED";
   question: string;
   startedAt: string;
   plan: unknown;
@@ -149,7 +149,7 @@ function selectedToolsFrom(content: string): QueryToolName[] {
 function parseCriticEntries(content: string, leadIds: string[]): { decisions: LeadDisposition[]; requests: CriticRequestTrace[]; challenges: RunTrace["criticChallenges"] } {
   const object = parseJsonObject(content);
   const array = parseJsonArray(content);
-  const rawEntries = array.length ? array : Array.isArray(object.decisions) ? object.decisions : [];
+  const rawEntries = array.length ? array : Array.isArray(object.decisions) ? object.decisions : object.leadId ? [object] : [];
   const decisions: LeadDisposition[] = [];
   const requests: CriticRequestTrace[] = [];
   const challenges: RunTrace["criticChallenges"] = [];
@@ -172,8 +172,23 @@ function parseCriticEntries(content: string, leadIds: string[]): { decisions: Le
     const need = topNeeds as Record<string, unknown>;
     if (isKnownQueryTool(need.tool)) requests.push({ tool: need.tool, params: need.params && typeof need.params === "object" && !Array.isArray(need.params) ? need.params as Record<string, unknown> : {}, round: 0, status: "executed" });
   }
-  if (challenges.length === 0 && content.trim()) challenges.push({ role: "defence-critic", challenge: content.trim().slice(0, 1_000) });
   return { decisions, requests, challenges };
+}
+
+export function mapCriticChallenges(content: string, role: string, leadId: string): RunTrace["criticChallenges"] {
+  const object = parseJsonObject(content);
+  const array = parseJsonArray(content);
+  const rawEntries = array.length ? array : Object.keys(object).length ? [object] : [];
+  return rawEntries.flatMap((raw) => {
+    if (!raw || typeof raw !== "object") return [];
+    const entry = raw as Record<string, unknown>;
+    const declaredLeadId = textValue(entry.leadId ?? entry.lead_id);
+    if (declaredLeadId !== leadId) return [];
+    const challenge = textValue(entry.challenge ?? entry.reason ?? entry.explanation);
+    if (!challenge) return [];
+    const disposition = textValue(entry.disposition).toLowerCase();
+    return [{ role, leadId, challenge, disposition: disposition || undefined }];
+  });
 }
 
 function summariseForModel(contracts: PricedContract[]): string { return JSON.stringify(contracts.slice(0, 12).map((contract) => ({ id: contract.evidenceId, publisher: contract.publisher, title: contract.title.slice(0, 100), date: contract.date, quantity: contract.quantity, value: contract.value, leaves: contract.leafCounts, unit: Number(contract.deflatedPricePerBook.toFixed(2)) }))); }
@@ -337,12 +352,9 @@ export async function runContractTrail(question = DEFAULT_QUESTION, options: Run
         { role: "system", content: "You are a classifier critic. detailed thinking off. Return a JSON array of challenges for this lead. Exclude laptop or ThinkPad notebook matches and mixed-item contracts. Do not calculate or change numbers." },
         { role: "user", content: `Question: ${question}\nFederal rows: ${federalContractRows.length}\nEvidence: ${summariseForModel(initial.federal)}\nOyo: ${summariseForModel(initial.oyo)}\nLead: ${leadForModel(lead, initial.comparison)}` },
       ] }, emit);
-      const challenges = parseJsonArray(result.content);
-      if (challenges.length > 0) {
-        const entries = challenges.map((entry) => ({ role: "classifier-critic", leadId: lead.id, challenge: JSON.stringify(entry) }));
-        trace.criticChallenges.push(...entries);
-        for (const challenge of entries) emit?.({ type: "critic_challenge", data: challenge });
-      }
+      const entries = mapCriticChallenges(result.content, "classifier-critic", lead.id);
+      trace.criticChallenges.push(...entries);
+      for (const challenge of entries) emit?.({ type: "critic_challenge", data: challenge });
     }));
 
     const initialDefence = await Promise.all(candidates.map((lead) => defenceCall(trace, question, lead, initial.federal, initial.oyo, initial.comparison, false, emit)));

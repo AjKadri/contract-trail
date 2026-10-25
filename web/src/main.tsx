@@ -59,14 +59,25 @@ function evidenceUrl(evidenceId: string): string {
   return `https://data.open-contracting.org/en/search/?q=${encodeURIComponent(ocid)}`;
 }
 
+function dataSources(sql: string): string[] {
+  return [...new Set([...sql.matchAll(/(?:FROM|JOIN)\s+([a-z0-9_]+)\./giu)].map((match) => match[1]))];
+}
+
 function datasource(sql: string): string {
-  const match = sql.match(/(?:FROM|JOIN)\s+([a-z0-9_]+)\./iu);
-  return match?.[1] ?? "ZETARIS";
+  const sources = dataSources(sql);
+  return sources.length > 1 ? `${sources.join(" + ")} · federated` : sources[0] ?? "ZETARIS";
 }
 
 function shortModel(model: string | null | undefined): string {
   if (!model) return "unknown model";
   return model.split("/").at(-1) ?? model;
+}
+
+function shortLeadId(leadId: unknown): string {
+  const value = typeof leadId === "string" ? leadId : "";
+  if (value === "price-gap-federal-vs-oyo") return "price-gap";
+  if (value.startsWith("twin-award-")) return "twin-award";
+  return value.length > 28 ? `${value.slice(0, 25)}…` : value || "lead";
 }
 
 function formatMoney(value: number): string {
@@ -102,9 +113,9 @@ function eventLabel(event: TimelineEvent): string {
   if (event.type === "plan") return "Planner produced a typed plan";
   if (event.type === "tool_call") return `${data.tool} · ${data.rowCount ?? 0} rows · ${data.durationMs ?? 0} ms`;
   if (event.type === "model_call") return `${data.role} · ${shortModel(data.returnedModel)} · ${data.latencyMs ?? 0} ms`;
-  if (event.type === "critic_challenge") return `${data.role ?? "critic"} challenged ${data.leadId ?? "a lead"}`;
-  if (event.type === "critic_request") return `${data.tool} · ${data.status} · round ${data.round}`;
-  if (event.type === "disposition") return `${data.leadId} · ${String(data.before).toUpperCase()} → ${String(data.after ?? "WITHDRAWN").toUpperCase()}`;
+  if (event.type === "critic_challenge") return `${data.role ?? "critic"} challenged ${shortLeadId(data.leadId)}`;
+  if (event.type === "critic_request") return `${data.tool} · ${data.status} · round ${data.round} · ${shortLeadId(data.leadId)}`;
+  if (event.type === "disposition") return `${shortLeadId(data.leadId)} · ${String(data.before).toUpperCase()} → ${String(data.after ?? "WITHDRAWN").toUpperCase()}`;
   if (event.type === "status") return data.status === "running" ? "Investigation started" : data.status;
   return data.message ?? "Run error";
 }
@@ -154,9 +165,17 @@ function PlanView({ value }: { value: unknown }) {
   </div>;
 }
 
-function challengeText(data: any): { summary: string; raw: unknown | null } {
+function challengeText(data: any, expectedLeadId?: string): { summary: string; raw: unknown | null } {
   const raw = parseJsonString(data.challenge);
+  const embeddedLeadId = objectValue(raw, "leadId");
+  if (expectedLeadId && embeddedLeadId && embeddedLeadId !== expectedLeadId) return { summary: "No challenge recorded for this lead.", raw: null };
   return { summary: objectValue(raw, "challenge") ?? objectValue(raw, "reason") ?? data.challenge ?? "No challenge recorded.", raw };
+}
+
+function dispositionOutcome(change: Trace["dispositionChanges"][number]): string {
+  if (change.disposition === "withdraw") return "Withdrawn by the defence critic after review.";
+  if (change.disposition === "stand") return `The defence critic let this lead stand at ${String(change.after ?? change.before).toUpperCase()}.`;
+  return `The defence critic downgraded this lead from ${change.before.toUpperCase()} to ${(change.after ?? "LOW").toUpperCase()}.`;
 }
 
 function evidenceMeta(trace: Trace, evidenceId: string): { title?: string; value?: number } {
@@ -187,8 +206,8 @@ function LeadCard({ lead, trace, onDismiss }: { lead: Lead; trace: Trace; onDism
     <p className="arithmetic">{lead.arithmetic}</p>
     {change ? <div className="disposition-line"><s>{change.before.toUpperCase()}</s><span>→</span><strong>{(change.after ?? "withdrawn").toUpperCase()}</strong><span>· {dispositionCopy(change)}</span></div> : null}
     <div className="evidence-row">{lead.evidenceIds.slice(0, 8).map((id) => { const meta = evidenceMeta(trace, id); const value = meta.value != null && Number.isFinite(meta.value) ? ` · ${formatMoney(meta.value)}` : ""; return <span className="evidence-chip-wrap" key={id} data-tooltip={`${meta.title ?? id}${value}`}><a href={evidenceUrl(id)} target="_blank" rel="noreferrer" className="evidence-chip">{id.split("/")[0]}</a></span>; })}</div>
-    <section className="quote-block"><p className="eyebrow">Defence critic says</p><ExpandableText text={challenge ? challengeText(challenge).summary : "No challenge recorded."} />{challenge && challengeText(challenge).raw ? <JsonDisclosure label="show JSON" value={challengeText(challenge).raw} /> : null}</section>
-    <section className="answer-block"><p className="eyebrow">Answer</p><ExpandableText text={change?.reason ?? "The evidence remains open for verification."} /></section>
+    <section className="quote-block"><p className="eyebrow">Defence critic says</p><ExpandableText text={challenge ? challengeText(challenge, lead.id).summary : "No challenge recorded."} />{challenge && challengeText(challenge, lead.id).raw ? <JsonDisclosure label="show JSON" value={challengeText(challenge, lead.id).raw} /> : null}</section>
+    <section className="answer-block"><p className="eyebrow">Answer</p><ExpandableText text={change ? dispositionOutcome(change) : "The evidence remains open for verification."} /></section>
     <section className="verify-block"><p className="eyebrow">Verify on the ground</p><p>{lead.whatToVerify}</p></section>
     <button className="dismiss-button" onClick={() => onDismiss(lead.id)}>Dismiss</button>
   </article>;
@@ -202,7 +221,7 @@ function RunSummary({ trace, events, sampleMode }: { trace: Trace | null; events
   const tools = trace?.toolCalls ?? events.filter((event) => event.type === "tool_call").map((event) => event.data as ToolTrace);
   const models = trace?.modelCalls ?? events.filter((event) => event.type === "model_call").map((event) => event.data as ModelTrace);
   const criticRequests = trace?.criticRequests ?? events.filter((event) => event.type === "critic_request" && event.data.status === "executed").map((event) => event.data);
-  const sources = [...new Set(tools.map((tool) => datasource(tool.sql ?? "")))];
+  const sources = [...new Set(tools.flatMap((tool) => dataSources(tool.sql ?? "")))];
   const modelCounts = new Map<string, number>();
   for (const model of models) { const name = shortModel(model.returnedModel ?? model.requestedModel); modelCounts.set(name, (modelCounts.get(name) ?? 0) + 1); }
   const modelText = [...modelCounts.entries()].map(([model, count]) => `${model} ×${count}`).join(" · ") || "none yet";
@@ -213,8 +232,9 @@ function Timeline({ events }: { events: TimelineEvent[] }) {
   return <div className="timeline">
     {events.map((event) => {
       const data = event.data ?? {};
-      const challenge = event.type === "critic_challenge" ? challengeText(data) : null;
-      return <div className={`timeline-item timeline-${event.type}`} key={event.id}><div className="timeline-icon">{eventIcon(event.type)}</div><div className="timeline-content"><div className="timeline-title"><span className="timeline-main">{eventLabel(event)}</span><time>{formatTime(event.at)}</time></div><div className="timeline-kind">{event.type.replaceAll("_", " ")}</div>{event.type === "tool_call" ? <details><summary>SQL · {datasource(data.sql ?? "")}</summary><pre>{data.sql}</pre></details> : null}{event.type === "model_call" ? <p className="timeline-detail">requested {shortModel(data.requestedModel)} · returned {shortModel(data.returnedModel)}{data.status ? ` · ${data.status}` : ""}</p> : null}{event.type === "critic_challenge" && challenge ? <><p className="timeline-detail"><ExpandableText text={challenge.summary} /></p>{challenge.raw ? <JsonDisclosure label="show JSON" value={challenge.raw} /> : null}</> : null}{event.type === "critic_request" ? <p className="timeline-detail">{data.leadId ?? "lead"} requested this typed query</p> : null}{event.type === "disposition" ? <p className="timeline-detail"><s>{String(data.before).toUpperCase()}</s> → <strong>{String(data.after ?? "WITHDRAWN").toUpperCase()}</strong> · {data.reason}</p> : null}{event.type === "plan" ? <PlanView value={data} /> : null}</div></div>;
+      const challenge = event.type === "critic_challenge" ? challengeText(data, typeof data.leadId === "string" ? data.leadId : undefined) : null;
+      const fullLeadId = typeof data.leadId === "string" ? data.leadId : undefined;
+      return <div className={`timeline-item timeline-${event.type}`} key={event.id}><div className="timeline-icon">{eventIcon(event.type)}</div><div className="timeline-content"><div className="timeline-title"><span className="timeline-main" title={fullLeadId}>{eventLabel(event)}</span><time>{formatTime(event.at)}</time></div><div className="timeline-kind">{event.type.replaceAll("_", " ")}</div>{event.type === "tool_call" ? <details><summary>SQL · {datasource(data.sql ?? "")}</summary><pre>{data.sql}</pre></details> : null}{event.type === "model_call" ? <p className="timeline-detail">requested {shortModel(data.requestedModel)} · returned {shortModel(data.returnedModel)}{data.status ? ` · ${data.status}` : ""}</p> : null}{event.type === "critic_challenge" && challenge ? <><p className="timeline-detail"><ExpandableText text={challenge.summary} /></p>{challenge.raw ? <JsonDisclosure label="show JSON" value={challenge.raw} /> : null}</> : null}{event.type === "critic_request" ? <p className="timeline-detail"><span title={fullLeadId}>{shortLeadId(data.leadId)}</span> requested this typed query</p> : null}{event.type === "disposition" ? <p className="timeline-detail"><s>{String(data.before).toUpperCase()}</s> → <strong>{String(data.after ?? "WITHDRAWN").toUpperCase()}</strong> · {data.reason}</p> : null}{event.type === "plan" ? <PlanView value={data} /> : null}</div></div>;
     })}
     {!events.length ? <p className="empty-state">The investigation log will appear here as the case runs.</p> : null}
   </div>;

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contract Trail · static run viewer</title>
+    <link rel="stylesheet" href="./viewer.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <div class="brand-lockup"><div class="brand-wordmark">Contract Trail</div><span class="brand-rule"></span><p>Static run viewer</p></div>
+        <div class="top-actions"><span class="disclaimer">Leads, not accusations</span><span class="replayed-badge">REPLAYED</span></div>
+      </header>
+      <section class="question-bar">
+        <div><p class="eyebrow">Run evidence</p><h1 id="question">Loading recorded trace…</h1></div>
+        <div class="viewer-controls"><label for="trace-select">Recorded trace</label><select id="trace-select"></select><label class="file-button" for="trace-file">Open trace JSON</label><input id="trace-file" type="file" accept="application/json,.json" /></div>
+      </section>
+      <section class="workspace">
+        <section class="log-column"><div class="column-heading"><div><p class="eyebrow">Recorded trace</p><h2>Investigation log</h2></div><span class="replayed-badge">REPLAYED</span></div><div id="timeline" class="timeline"></div><p id="trace-path" class="trace-path"></p></section>
+        <section class="leads-column"><div id="summary" class="summary-strip"></div><div class="column-heading leads-heading"><div><p class="eyebrow">Evidence desk</p><h2>Leads to verify</h2></div><span id="lead-count" class="lead-count"></span></div><div id="leads"></div></section>
+      </section>
+    </main>
+    <script type="module" src="./viewer.js"></script>
+  </body>
+</html>

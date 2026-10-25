@@ -10,6 +10,8 @@
     "test": "vitest run --root .",
     "typecheck": "tsc --noEmit",
     "dev": "concurrently -k \"tsx src/server/index.ts\" \"vite --host 127.0.0.1\"",
+    "demo": "tsx src/cli/demo.ts",
+    "build:viewer": "tsx scripts/build-viewer.ts",
     "db:up": "docker compose --env-file .env -f infra/data-compose.yml up -d",
     "ask": "tsx src/cli/ask.ts",
     "memory:reset": "tsx scripts/memory-reset.ts",

@@ -51,6 +51,21 @@ git clone --depth 1 https://github.com/Meterless/Meterless.git vendor/meterless
 npm run conformance:hmem
 ```
 
+## M5 replay and viewer
+
+The replayable case uses a recorded trace with saved Zetaris rows and model
+outputs. It needs no `.env`, Zetaris, or Nightshift:
+
+```sh
+SAMPLE_MODE=true npm run demo
+npm run build:viewer
+python3 -m http.server 4174 --directory docs/viewer
+```
+
+Open `http://127.0.0.1:4174/` to inspect the replayed case. The viewer also
+accepts any trace JSON through its file picker and includes the recorded traces
+under `docs/viewer/traces/` for static hosting.
+
 ## Data sources
 - Open Contracting Data Registry (Open Contracting Partnership): Nigeria Bureau of Public Procurement, Osun State, Oyo State. Licence notes to be confirmed per publisher.
 - World Bank: Nigeria consumer price index (FP.CPI.TOTL), CC BY 4.0.
