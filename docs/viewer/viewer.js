@@ -179,4 +179,4 @@ const catalog = await fetch("./traces/index.json").then((response) => response.j
 for (const name of catalog) { const option = document.createElement("option"); option.value = name; option.textContent = name; traceSelect.append(option); }
 const requested = new URLSearchParams(location.search).get("trace");
 const initial = requested || catalog[0];
-if (initial) loadSelected(requested ? requested : `./traces/${initial}`);
+if (initial) loadSelected(requested && (requested.includes("/") || requested.startsWith(".")) ? requested : `./traces/${initial}`);
