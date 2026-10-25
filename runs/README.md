@@ -3,7 +3,7 @@
 The five top-level JSON files are the curated proof pack from agent version 2.
 They are real `LIVE` sessions, have all model calls at `status=ok`, contain no
 retry calls, and finish in under 120 seconds. The static viewer reads only the
-top-level curated records and uses the latest one as its bundled sample.
+top-level curated records. The latest one is also bundled as the default sample.
 
 ## Curated proof pack
 

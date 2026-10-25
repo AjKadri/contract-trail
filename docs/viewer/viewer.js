@@ -16,6 +16,8 @@ const shortModel = (value) => {
   return value.split("/").at(-1) || value;
 };
 const formatDuration = (milliseconds) => milliseconds == null ? "in progress" : milliseconds < 1000 ? `${milliseconds} ms` : `${(milliseconds / 1000).toFixed(1)} s`;
+const catalogFile = (entry) => typeof entry === "string" ? entry : entry.file;
+const catalogLabel = (entry) => typeof entry === "string" ? entry : `${entry.date} ${entry.time} UTC · ${formatDuration(entry.durationMs)} · ${entry.leads} leads`;
 const shortLeadId = (value) => {
   if (value === "price-gap-federal-vs-oyo") return "price-gap";
   if (typeof value === "string" && value.startsWith("twin-award-")) return "twin-award";
@@ -177,13 +179,13 @@ function render(trace, label) {
 
 async function loadUrl(url, label) { const response = await fetch(url); if (!response.ok) throw new Error(`Unable to load ${url}`); const trace = await response.json(); render(trace, label); }
 
-async function loadSelected(url) { traceSelect.replaceChildren(); try { await loadUrl(url, url); } catch (error) { question.textContent = error.message; } }
+async function loadSelected(url) { try { await loadUrl(url, url); } catch (error) { question.textContent = error.message; } }
 
 traceFile.addEventListener("change", async () => { const file = traceFile.files?.[0]; if (!file) return; render(JSON.parse(await file.text()), file.name); });
 traceSelect.addEventListener("change", () => { if (traceSelect.value) loadSelected(`./traces/${traceSelect.value}`); });
 
 const catalog = await fetch("./traces/index.json").then((response) => response.json());
-for (const name of catalog) { const option = document.createElement("option"); option.value = name; option.textContent = name; traceSelect.append(option); }
+for (const entry of catalog) { const name = catalogFile(entry); const option = document.createElement("option"); option.value = name; option.textContent = catalogLabel(entry); option.title = name; traceSelect.append(option); }
 const requested = new URLSearchParams(location.search).get("trace");
-const initial = requested || catalog[0];
+const initial = requested || catalogFile(catalog[0]);
 if (initial) loadSelected(requested && (requested.includes("/") || requested.startsWith(".")) ? requested : `./traces/${initial}`);
