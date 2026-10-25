@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "mode": "LIVE",
+  "action": "dismiss",
+  "leadId": "twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613",
+  "reason": "Separate constituency lots with different school clusters should be checked before treating this as duplicate.",
+  "previousMemoryId": "mem-2",
+  "memoryId": "mem-3",
+  "memoryWrites": [
+    {
+      "action": "create",
+      "memoryId": "mem-3",
+      "supersedes": "mem-2"
+    }
+  ]
+}

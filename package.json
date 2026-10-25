@@ -7,8 +7,9 @@
     "node": ">=20"
   },
   "scripts": {
-    "test": "vitest run",
+    "test": "vitest run --root .",
     "typecheck": "tsc --noEmit",
+    "dev": "concurrently -k \"tsx src/server/index.ts\" \"vite --host 127.0.0.1\"",
     "db:up": "docker compose --env-file .env -f infra/data-compose.yml up -d",
     "ask": "tsx src/cli/ask.ts",
     "memory:reset": "tsx scripts/memory-reset.ts",
@@ -21,12 +22,20 @@
     "conformance:hmem": "HMEM_IMPL=$PWD/src/engines/hmem/index.ts npx tsx vendor/meterless/engines/hmem/conformance/runner.ts"
   },
   "dependencies": {
-    "dotenv": "^17.2.3"
+    "dotenv": "^17.2.3",
+    "fastify": "^5.12.7",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
     "@types/node": "^24.7.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "concurrently": "^10.0.6",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
+    "vite": "^7.3.7",
     "vitest": "^3.2.4"
   }
 }

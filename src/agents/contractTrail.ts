@@ -86,15 +86,20 @@ export type RunTrace = {
 
 export type RunResult = { trace: RunTrace; tracePath: string; leads: DeterministicLead[]; withdrawnLeads: RunTrace["withdrawnLeads"]; supersededLeads: SupersededLead[] };
 export type DismissalResult = { leadId: string; reason: string; previousMemoryId: string; memory: MemoryRecord; tracePath: string };
-export type RunOptions = { memoryFile?: string };
+export type RunOptions = { memoryFile?: string; onEvent?: (event: TraceEvent) => void };
+export type TraceEvent = { type: "plan" | "tool_call" | "model_call" | "critic_challenge" | "critic_request" | "disposition"; data: unknown };
 
 function asFederalContract(row: unknown[]): FederalContract { return { id: textValue(row[0]), mainOcid: textValue(row[1]), mainId: textValue(row[2]), title: textValue(row[3]), dateSigned: textValue(row[4]), value: numberValue(row[5]), currency: textValue(row[6]) }; }
 function asFederalItem(row: unknown[]): FederalItem { return { contractId: textValue(row[0]), mainOcid: textValue(row[1]), mainId: textValue(row[2]), title: textValue(row[3]), dateSigned: textValue(row[4]), value: numberValue(row[5]), currency: textValue(row[6]), itemId: textValue(row[7]), quantity: numberValue(row[8]), description: textValue(row[9]) }; }
 function asOyoContract(row: unknown[]): OyoContract { return { ocid: textValue(row[0]), id: textValue(row[1]), date: textValue(row[2]), title: textValue(row[3]), value: numberValue(row[4]), currency: textValue(row[5]), buyer: textValue(row[6]), procuringEntity: textValue(row[7]) }; }
 function asCpiPoint(row: unknown[]): CpiPoint { return { year: yearOf(textValue(row[0])), value: numberValue(row[1]) }; }
 
-function addModelLogs(trace: RunTrace, logs: ModelCallLog[], output: string, role: string): void {
-  for (const log of logs) trace.modelCalls.push({ ...log, output: log.role === role ? output : undefined });
+function addModelLogs(trace: RunTrace, logs: ModelCallLog[], output: string, role: string, onEvent?: (event: TraceEvent) => void): void {
+  for (const log of logs) {
+    const traced = { ...log, output: log.role === role ? output : undefined };
+    trace.modelCalls.push(traced);
+    onEvent?.({ type: "model_call", data: { ...log } });
+  }
   trace.modelOutputs[role] = output;
 }
 
@@ -116,15 +121,18 @@ function syncMemoryFile(binding: { persistDir: string; file?: string }): void {
   if (existsSync(stateFile)) copyFileSync(stateFile, binding.file);
 }
 
-async function callAndRecord(trace: RunTrace, options: CallOptions): Promise<ModelCallResult> {
+async function callAndRecord(trace: RunTrace, options: CallOptions, onEvent?: (event: TraceEvent) => void): Promise<ModelCallResult> {
   try {
     const result = await callNightshift(options);
-    addModelLogs(trace, result.logs, result.content, options.role);
+    addModelLogs(trace, result.logs, result.content, options.role, onEvent);
     return result;
   } catch (error) {
     const failed = error as Error & { modelLogs?: ModelCallLog[]; callLog?: ModelCallLog };
     const logs = failed.modelLogs ?? (failed.callLog ? [failed.callLog] : []);
-    for (const log of logs) trace.modelCalls.push({ ...log, output: undefined });
+    for (const log of logs) {
+      trace.modelCalls.push({ ...log, output: undefined });
+      onEvent?.({ type: "model_call", data: { ...log } });
+    }
     trace.modelOutputs[options.role] = `ERROR: ${failed.message}`;
     return { content: "", returnedModel: null, logs };
   }
@@ -220,30 +228,52 @@ export function dismissLead(leadId: string, reason: string, persistDir = HMEM_DI
 
 function newTrace(question: string): RunTrace { return { version: 2, mode: "LIVE", question, startedAt: new Date().toISOString(), plan: null, plannerChosenTools: [], selectedTools: [], toolSelectionNotes: [], toolCalls: [], modelCalls: [], modelOutputs: {}, criticChallenges: [], criticRequests: [], dispositionChanges: [], validationFailures: [], withdrawnLeads: [], supersededLeads: [], finalLeads: [], supplierContext: [], memoryReads: [], memoryWrites: [] }; }
 
-async function runTool(trace: RunTrace, tool: QueryToolName, params: Record<string, unknown>, requestedBy: ToolTrace["requestedBy"]): Promise<unknown[][]> {
+async function runTool(trace: RunTrace, tool: QueryToolName, params: Record<string, unknown>, requestedBy: ToolTrace["requestedBy"], onEvent?: (event: TraceEvent) => void): Promise<unknown[][]> {
   const query = buildTypedQuery(tool);
   const startedAt = new Date().toISOString();
   const started = Date.now();
   try {
     const result = await runZetarisSql(query.sql, query.limit);
     const resultRows = rows(result);
-    trace.toolCalls.push({ tool, params, sql: query.sql, limit: query.limit, startedAt, durationMs: Date.now() - started, rowCount: resultRows.length, resultRows: resultRows.slice(0, 200), status: "ok", requestedBy });
+    const toolTrace = { tool, params, sql: query.sql, limit: query.limit, startedAt, durationMs: Date.now() - started, rowCount: resultRows.length, resultRows: resultRows.slice(0, 200), status: "ok" as const, requestedBy };
+    trace.toolCalls.push(toolTrace);
+    onEvent?.({ type: "tool_call", data: toolTrace });
     return resultRows;
   } catch (error) {
-    trace.toolCalls.push({ tool, params, sql: query.sql, limit: query.limit, startedAt, durationMs: Date.now() - started, rowCount: 0, resultRows: [], status: "error", requestedBy, error: error instanceof Error ? error.message : String(error) });
+    const toolTrace = { tool, params, sql: query.sql, limit: query.limit, startedAt, durationMs: Date.now() - started, rowCount: 0, resultRows: [], status: "error" as const, requestedBy, error: error instanceof Error ? error.message : String(error) };
+    trace.toolCalls.push(toolTrace);
+    onEvent?.({ type: "tool_call", data: toolTrace });
     throw error;
   }
 }
 
-async function defenceCall(trace: RunTrace, question: string, lead: DeterministicLead, federal: PricedContract[], oyo: PricedContract[], comparison: LeafMatchedComparison | undefined, rejudge: boolean): Promise<{ decisions: LeadDisposition[]; requests: CriticRequestTrace[] }> {
+async function defenceCall(trace: RunTrace, question: string, lead: DeterministicLead, federal: PricedContract[], oyo: PricedContract[], comparison: LeafMatchedComparison | undefined, rejudge: boolean, onEvent?: (event: TraceEvent) => void): Promise<{ decisions: LeadDisposition[]; requests: CriticRequestTrace[] }> {
   const ids = [lead.id];
-  const result = await callAndRecord(trace, { role: "defence-critic", model: deepModel(), fallbackModel: fastModel(), maxTokens: 4096, messages: [
+  const result = await callAndRecord(trace, { role: "defence-critic", model: deepModel(), fallbackModel: fastModel(), maxTokens: 4096, chatTemplateKwargs: THINKING_OFF, messages: [
     { role: "system", content: `You are the defence critic. detailed thinking off. ${rejudge ? "Re-judge after the requested typed-tool result." : "Review this deterministic lead."} Return a JSON array with one object containing leadId, disposition (stand, downgrade, or withdraw), reason. If this price-gap lead lacks a leaf-matched comparison, request it with needs: {tool:"getLeafMatchedComparison",params:{leafCounts:[20,40,60,80,100]}}. If a lead is explained by duplicate release or invalid evidence, withdraw it. Otherwise downgrade when specifications, distribution, or lot scale remain unresolved. Do not calculate numbers.` },
     { role: "user", content: `Question: ${question}\n${leadForModel(lead, comparison)}\nFederal evidence: ${summariseForModel(federal)}\nOyo evidence: ${summariseForModel(oyo)}` },
   ] });
   const parsed = parseCriticEntries(result.content, ids);
   trace.criticChallenges.push(...parsed.challenges);
+  for (const challenge of parsed.challenges) onEvent?.({ type: "critic_challenge", data: challenge });
+  const hasLeafComparison = Boolean(comparison?.matchedLeafCounts.length);
+  const criticAskedForLeaves = parsed.requests.some((request) => request.tool === "getLeafMatchedComparison");
+  if (lead.kind === "price-gap" && !hasLeafComparison && !criticAskedForLeaves) {
+    const requiredRequest: CriticRequestTrace = {
+      leadId: lead.id,
+      tool: "getLeafMatchedComparison",
+      params: { leafCounts: [20, 40, 60, 80, 100] },
+      round: 0,
+      status: "executed",
+      reason: "defence evidence gate: unmatched leaf counts require a leaf-matched comparison",
+    };
+    parsed.requests.push(requiredRequest);
+  }
   return { ...parsed, requests: parsed.requests.map((request) => ({ ...request, leadId: request.leadId ?? lead.id })) };
+}
+
+export function shouldRunCriticTool(requests: CriticRequestTrace[], tool: QueryToolName): boolean {
+  return requests.some((request) => request.tool === tool && request.status === "executed");
 }
 
 function recompute(federalRows: unknown[][], oyoRows: unknown[][], cpiRows: unknown[][], leafRows: unknown[][] | undefined, trace: RunTrace): { federal: PricedContract[]; oyo: PricedContract[]; comparison?: LeafMatchedComparison; leads: DeterministicLead[] } {
@@ -264,27 +294,35 @@ export async function runContractTrail(question = DEFAULT_QUESTION, options: Run
   const started = Date.now();
   let tracePath = "";
   const memory = memoryBinding(options.memoryFile);
+  const emit = options.onEvent;
   try {
     const planner = await callAndRecord(trace, { role: "planner", model: deepModel(), fallbackModel: fastModel(), maxTokens: 4096, chatTemplateKwargs: THINKING_OFF, messages: [
       { role: "system", content: "You are the Contract Trail planner. detailed thinking off. Do not compute numbers or decide matches. Return JSON with steps and a tools array containing only typed tool names needed for the question." },
-      { role: "user", content: `Question: ${question}\nTools: ${toolNameList().join(", ")}\nPlan federal/Oyo price comparison, CPI, twin-award check, and a possible leaf follow-up.` },
-    ] });
+      { role: "user", content: `Question: ${question}\nTools: ${toolNameList().join(", ")}\nPlan federal/Oyo price comparison, CPI, and twin-award check. A leaf-matched follow-up is critic-only.` },
+    ] }, emit);
     trace.plan = parseJsonObject(planner.content);
     if (Object.keys(trace.plan as Record<string, unknown>).length === 0) trace.plan = planFallback();
     trace.plannerChosenTools = selectedToolsFrom(planner.content);
     trace.toolSelectionNotes.push(`planner chose ${trace.plannerChosenTools.join(", ") || "no tools"}`);
+    emit?.({ type: "plan", data: trace.plan });
 
     const dataAgent = await callAndRecord(trace, { role: "data-agent", model: fastModel(), maxTokens: 4096, chatTemplateKwargs: THINKING_OFF, messages: [
       { role: "system", content: "You are a typed-tool data agent. detailed thinking off. Select named tools only. Never emit SQL, calculate numbers, or silently add tools." },
       { role: "user", content: buildToolSelectionPrompt(question, JSON.stringify(trace.plan)) },
-    ] });
+    ] }, emit);
     trace.selectedTools = selectedToolsFrom(dataAgent.content);
     trace.toolSelectionNotes.push(`data-agent chose ${trace.selectedTools.join(", ") || "no tools"}`);
     const plannerSet = new Set(trace.plannerChosenTools);
     for (const tool of trace.selectedTools.filter((value) => !plannerSet.has(value))) trace.toolSelectionNotes.push(`data-agent added ${tool}`);
 
     const toolRows = new Map<QueryToolName, unknown[][]>();
-    for (const tool of trace.selectedTools) toolRows.set(tool, await runTool(trace, tool, {}, "data-agent"));
+    for (const tool of trace.selectedTools) {
+      if (tool === "getLeafMatchedComparison") {
+        trace.toolSelectionNotes.push("getLeafMatchedComparison deferred until a defence critic request");
+        continue;
+      }
+      toolRows.set(tool, await runTool(trace, tool, {}, "data-agent", emit));
+    }
     const federalContractRows = toolRows.get("searchFederalBookContracts") ?? [];
     const federalRows = toolRows.get("getFederalBookContractItems") ?? toolRows.get("getLeafMatchedComparison") ?? [];
     const oyoRows = toolRows.get("searchOyoBookContracts") ?? [];
@@ -298,12 +336,16 @@ export async function runContractTrail(question = DEFAULT_QUESTION, options: Run
       const result = await callAndRecord(trace, { role: "classifier-critic", model: fastModel(), maxTokens: 4096, chatTemplateKwargs: THINKING_OFF, messages: [
         { role: "system", content: "You are a classifier critic. detailed thinking off. Return a JSON array of challenges for this lead. Exclude laptop or ThinkPad notebook matches and mixed-item contracts. Do not calculate or change numbers." },
         { role: "user", content: `Question: ${question}\nFederal rows: ${federalContractRows.length}\nEvidence: ${summariseForModel(initial.federal)}\nOyo: ${summariseForModel(initial.oyo)}\nLead: ${leadForModel(lead, initial.comparison)}` },
-      ] });
+      ] }, emit);
       const challenges = parseJsonArray(result.content);
-      if (challenges.length > 0) trace.criticChallenges.push(...challenges.map((entry) => ({ role: "classifier-critic", leadId: lead.id, challenge: JSON.stringify(entry) })));
+      if (challenges.length > 0) {
+        const entries = challenges.map((entry) => ({ role: "classifier-critic", leadId: lead.id, challenge: JSON.stringify(entry) }));
+        trace.criticChallenges.push(...entries);
+        for (const challenge of entries) emit?.({ type: "critic_challenge", data: challenge });
+      }
     }));
 
-    const initialDefence = await Promise.all(candidates.map((lead) => defenceCall(trace, question, lead, initial.federal, initial.oyo, initial.comparison, false)));
+    const initialDefence = await Promise.all(candidates.map((lead) => defenceCall(trace, question, lead, initial.federal, initial.oyo, initial.comparison, false, emit)));
     const decisions = new Map<string, LeadDisposition>();
     let pendingRequests: CriticRequestTrace[] = [];
     for (const result of initialDefence) {
@@ -318,7 +360,9 @@ export async function runContractTrail(question = DEFAULT_QUESTION, options: Run
         const leadKey = request.leadId ?? "all";
         const count = requestCounts.get(leadKey) ?? 0;
         if (count >= 2) {
-          trace.criticRequests.push({ ...request, round, status: "bounded", reason: "maximum two critic-to-data rounds per lead reached" });
+          const bounded = { ...request, round, status: "bounded" as const, reason: "maximum two critic-to-data rounds per lead reached" };
+          trace.criticRequests.push(bounded);
+          emit?.({ type: "critic_request", data: bounded });
           return false;
         }
         requestCounts.set(leadKey, count + 1);
@@ -328,17 +372,22 @@ export async function runContractTrail(question = DEFAULT_QUESTION, options: Run
       const rejudgeIds = new Set<string>();
       for (const request of requests) {
         if (request.tool !== "getLeafMatchedComparison") {
-          trace.criticRequests.push({ ...request, round, status: "rejected", reason: "tool is typed but not implemented for this replayable case" });
+          const rejected = { ...request, round, status: "rejected" as const, reason: "tool is typed but not implemented for this replayable case" };
+          trace.criticRequests.push(rejected);
+          emit?.({ type: "critic_request", data: rejected });
           continue;
         }
-        trace.criticRequests.push({ ...request, round, status: "executed" });
-        leafRows = await runTool(trace, request.tool, request.params, "critic");
+        const executed = { ...request, round, status: "executed" as const };
+        trace.criticRequests.push(executed);
+        emit?.({ type: "critic_request", data: executed });
+        if (!shouldRunCriticTool([executed], "getLeafMatchedComparison")) continue;
+        leafRows = await runTool(trace, request.tool, request.params, "critic", emit);
         if (request.leadId) rejudgeIds.add(request.leadId);
       }
       if (rejudgeIds.size === 0) break;
       const updated = recompute(federalRows, oyoRows, cpiRows, leafRows, trace);
       candidates = validateEvidence(updated.leads, trace.selectedTools.concat("getLeafMatchedComparison"), trace);
-      const rejudged = await Promise.all(candidates.filter((lead) => rejudgeIds.has(lead.id)).map((lead) => defenceCall(trace, question, lead, updated.federal, updated.oyo, updated.comparison, true)));
+      const rejudged = await Promise.all(candidates.filter((lead) => rejudgeIds.has(lead.id)).map((lead) => defenceCall(trace, question, lead, updated.federal, updated.oyo, updated.comparison, true, emit)));
       pendingRequests = [];
       for (const result of rejudged) {
         for (const decision of result.decisions) decisions.set(decision.leadId, decision);
@@ -349,7 +398,10 @@ export async function runContractTrail(question = DEFAULT_QUESTION, options: Run
     const finalData = recompute(federalRows, oyoRows, cpiRows, leafRows, trace);
     candidates = validateEvidence(finalData.leads, trace.selectedTools.concat(leafRows ? ["getLeafMatchedComparison"] : []), trace);
     const applied = applyLeadDispositions(candidates, [...decisions.values()]);
-    for (const change of applied.changes) trace.dispositionChanges.push(change);
+    for (const change of applied.changes) {
+      trace.dispositionChanges.push(change);
+      emit?.({ type: "disposition", data: change });
+    }
     for (const item of applied.withdrawn) trace.withdrawnLeads.push({ leadId: item.lead.id, reason: item.reason, severityBefore: item.lead.severity });
 
     const hmem = new HMEM({ persistDir: memory.persistDir, actor: "contract-trail" });

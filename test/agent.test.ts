@@ -5,7 +5,8 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { HMEM } from "../src/engines/hmem/index.js";
-import { dismissLead } from "../src/agents/contractTrail.js";
+import { dismissLead, shouldRunCriticTool } from "../src/agents/contractTrail.js";
+import { buildToolSelectionPrompt } from "../src/data/queries.js";
 
 const tempDirs: string[] = [];
 
@@ -36,5 +37,14 @@ describe("M3 dismiss memory", () => {
     const result = dismissLead("price-gap-federal-vs-oyo", "explicit demo correction", undefined, dir, memoryFile);
     expect(existsSync(memoryFile)).toBe(true);
     expect(result.memory.content).toContain("explicit demo correction");
+  });
+
+  it("defers leaf comparison until the defence critic asks for it", () => {
+    expect(shouldRunCriticTool([], "getLeafMatchedComparison")).toBe(false);
+    expect(shouldRunCriticTool([{ tool: "getLeafMatchedComparison", params: {}, round: 1, status: "rejected" }], "getLeafMatchedComparison")).toBe(false);
+    expect(shouldRunCriticTool([{ tool: "getLeafMatchedComparison", params: {}, round: 1, status: "executed" }], "getLeafMatchedComparison")).toBe(true);
+    const prompt = buildToolSelectionPrompt("book prices", "{} ");
+    expect(prompt).toContain("Do not select getLeafMatchedComparison");
+    expect(prompt).toMatch(/using only these names: searchFederalBookContracts, getFederalBookContractItems, searchOyoBookContracts, getNigeriaCpi, getCrossPublisherSuppliers/u);
   });
 });

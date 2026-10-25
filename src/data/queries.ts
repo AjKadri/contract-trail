@@ -119,8 +119,8 @@ export function buildToolSelectionPrompt(question: string, plan: string): string
     "Select only named typed tools. Never write SQL and never compute procurement numbers.",
     `Question: ${question}`,
     `Planner output: ${plan}`,
-    "Return JSON only: {\"tools\":[...]} using only these names: searchFederalBookContracts, getFederalBookContractItems, searchOyoBookContracts, getNigeriaCpi, getCrossPublisherSuppliers, getLeafMatchedComparison.",
-    "Choose the smallest set of tools that supports the plan. The defence critic can request getLeafMatchedComparison later.",
+    "Return JSON only: {\"tools\":[...]} using only these names: searchFederalBookContracts, getFederalBookContractItems, searchOyoBookContracts, getNigeriaCpi, getCrossPublisherSuppliers.",
+    "Choose the smallest set of tools that supports the plan. Do not select getLeafMatchedComparison; the defence critic requests that typed tool only when the price-gap lead has unmatched leaf counts.",
   ].join("\n");
 }
 
@@ -128,7 +128,6 @@ export function toolNameList(): QueryToolName[] {
   return [
     "searchFederalBookContracts",
     "getFederalBookContractItems",
-    "getLeafMatchedComparison",
     "searchOyoBookContracts",
     "getNigeriaCpi",
     "getCrossPublisherSuppliers",
