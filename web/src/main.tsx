@@ -70,6 +70,9 @@ function datasource(sql: string): string {
 
 function shortModel(model: string | null | undefined): string {
   if (!model) return "unknown model";
+  const normalized = model.toLowerCase();
+  if (normalized.includes("ultra")) return "ULTRA 550B";
+  if (normalized.includes("lightning")) return "LIGHTNING 30B";
   return model.split("/").at(-1) ?? model;
 }
 

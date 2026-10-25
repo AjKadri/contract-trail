@@ -8,7 +8,14 @@ const leadCount = document.querySelector("#lead-count");
 const tracePath = document.querySelector("#trace-path");
 
 const money = (value) => `₦${new Intl.NumberFormat("en-NG", { maximumFractionDigits: 0 }).format(Math.round(value))}`;
-const shortModel = (value) => value ? value.split("/").at(-1) : "unknown model";
+const shortModel = (value) => {
+  if (!value) return "unknown model";
+  const normalized = value.toLowerCase();
+  if (normalized.includes("ultra")) return "ULTRA 550B";
+  if (normalized.includes("lightning")) return "LIGHTNING 30B";
+  return value.split("/").at(-1) || value;
+};
+const formatDuration = (milliseconds) => milliseconds == null ? "in progress" : milliseconds < 1000 ? `${milliseconds} ms` : `${(milliseconds / 1000).toFixed(1)} s`;
 const shortLeadId = (value) => {
   if (value === "price-gap-federal-vs-oyo") return "price-gap";
   if (typeof value === "string" && value.startsWith("twin-award-")) return "twin-award";
@@ -137,12 +144,12 @@ function renderTimeline(trace) {
     let label = event.type.replaceAll("_", " ");
     let detail = "";
     if (event.type === "plan") label = "Planner produced a typed plan";
-    if (event.type === "model_call") { label = `${data.role} · ${shortModel(data.returnedModel)} · ${data.latencyMs || 0} ms`; detail = `requested ${shortModel(data.requestedModel)} · returned ${shortModel(data.returnedModel)} · ${data.status || "recorded"}`; }
+    if (event.type === "model_call") { const requested = data.requestedModel || ""; const returned = data.returnedModel || requested; const differs = requested && returned && requested !== returned; label = `${String(data.role || "model").toUpperCase()} · ${shortModel(returned)}${differs ? " · FALLBACK" : ""} · ${formatDuration(data.latencyMs)} · ${String(data.status || "recorded").toUpperCase()}`; detail = ""; item.dataset.modelTooltip = differs ? `requested ${requested}; returned ${returned}` : `requested and returned ${returned}`; }
     if (event.type === "tool_call") { label = `${data.tool} · ${data.rowCount || 0} rows · ${data.durationMs || 0} ms`; detail = `SQL · ${datasource(data.sql)}`; }
     if (event.type === "critic_challenge") { label = `${data.role || "critic"} challenged ${shortLeadId(fullLeadId)}`; detail = challengeFor({ criticChallenges: [data] }, fullLeadId); }
     if (event.type === "critic_request") { label = `${data.tool} · ${data.status} · ${shortLeadId(fullLeadId)}`; detail = `${shortLeadId(fullLeadId)} requested this typed query`; }
     if (event.type === "disposition") { label = `${shortLeadId(fullLeadId)} · ${(data.before || "").toUpperCase()} → ${(data.after || "WITHDRAWN").toUpperCase()}`; detail = data.reason || ""; }
-    item.innerHTML = `<div class="timeline-icon">${event.type === "tool_call" ? "DB" : event.type === "model_call" ? "M" : event.type === "critic_challenge" || event.type === "critic_request" ? "C" : event.type === "plan" ? "P" : "Δ"}</div><div class="timeline-content"><div class="timeline-title"><span title="${fullLeadId || ""}">${label}</span></div><div class="timeline-kind">${event.type.replaceAll("_", " ")}</div><p class="timeline-detail">${detail}</p></div>`;
+    item.innerHTML = `<div class="timeline-icon">${event.type === "tool_call" ? "DB" : event.type === "model_call" ? "M" : event.type === "critic_challenge" || event.type === "critic_request" ? "C" : event.type === "plan" ? "P" : "Δ"}</div><div class="timeline-content"><div class="timeline-title"><span title="${event.type === "model_call" ? item.dataset.modelTooltip : fullLeadId || ""}">${label}</span></div><div class="timeline-kind">${event.type.replaceAll("_", " ")}</div><p class="timeline-detail">${detail}</p></div>`;
     if (event.type === "plan") {
       const steps = Array.isArray(data.plan) ? data.plan : [];
       const list = document.createElement("ol");
