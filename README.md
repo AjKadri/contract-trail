@@ -68,7 +68,7 @@ Expected: `[demo] REPLAYED … saved_rows=239 tool_calls=6 … lead=price-gap-fe
 More OCDS publishers (any of the 50+ countries that publish in the standard), company-registry checks where open data exists, and export of a lead pack for an editor.
 
 ## Data and licences
-- Procurement data via the Open Contracting Partnership's [Data Registry](https://data.open-contracting.org/): Nigeria Bureau of Public Procurement, Osun State, Oyo State. Publisher licences apply.
+- Procurement data via the Open Contracting Partnership's [Data Registry](https://data.open-contracting.org/): Nigeria Bureau of Public Procurement (published under the [ODC Public Domain Dedication and Licence](https://nocopo.bpp.gov.ng/license)), Osun State, Oyo State (publisher terms apply).
 - World Bank, Nigeria CPI (`FP.CPI.TOTL`), CC BY 4.0.
 - H-MEM spec and conformance suite: [Meterless](https://github.com/Meterless/Meterless), Apache-2.0.
 - Code: MIT.
