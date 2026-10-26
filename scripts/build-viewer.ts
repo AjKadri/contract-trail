@@ -20,7 +20,7 @@ for (const file of ["index.html", "viewer.js", "viewer.css", "favicon.svg"]) cop
 
 const curatedNames = readFileSync(join(runsDir, "README.md"), "utf8").match(/^- `([^`]+\.json)`$/gmu)?.map((line) => line.slice(3, -1)) ?? [];
 const traces = readdirSync(runsDir)
-  .filter((file) => file.endsWith(".json") && file.includes("-are-the-exercise-book-contracts-in-federal-const"))
+  .filter((file) => file.endsWith(".json"))
   .filter((file) => !file.startsWith("probe-") && !file.includes("-dismiss-"))
   .filter((file) => curatedNames.length === 0 || curatedNames.includes(file))
   .sort();

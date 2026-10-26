@@ -68,15 +68,27 @@ Built on:
 
 ## Check it yourself
 **No setup (replayed real run):**
+
+**First, replay the included trace after installing dependencies:**
+```sh
+SAMPLE_MODE=true npm run demo      # REPLAYED: real recorded Zetaris rows and Nemotron outputs, no services or keys
+```
+
+From a fresh clone:
 ```sh
 git clone https://github.com/AjKadri/contract-trail.git && cd contract-trail
 npm ci
-SAMPLE_MODE=true npm run demo      # REPLAYED: real recorded Zetaris rows and Nemotron outputs, no services or keys
 ```
 Expected: `[demo] REPLAYED … saved_rows=239 tool_calls=6 … lead=price-gap-federal-vs-oyo severity=medium`.
 
-- **Run records:** [`runs/`](runs/) holds 6 curated real live sessions. Each includes the SQL text, row counts, timings, model IDs, critic challenges and disposition changes.
+- **Run records:** [`runs/`](runs/) holds 9 curated real live sessions. Each includes the SQL text, row counts, timings, model IDs, critic challenges and disposition changes.
 - **Verify any number:** every evidence ID links to its record on data.open-contracting.org, and every lead shows its arithmetic.
+
+## Sample inputs and outputs
+- **Are the exercise-book contracts in federal constituency projects priced fairly compared with what states pay?** The live run returned one active, defence-downgraded price-gap lead: 5.16× federal versus Oyo median price per book on matched 60- and 80-leaf books, expressed in 2025 CPI terms. Trace: `2026-10-26T20-01-55-382Z-are-the-exercise-book-contracts-in-federal-const.json`.
+- **Which suppliers won contracts from both the federal government and Osun?** The live run returned 7 overlap matches: SYMROYAL INTEGRATED NIGERIA LIMITED, TAMGAJ CORPORATE SERVICES LTD, SALFAT ULTIMATE SYNERGY LTD, JOELF BUILDERS GLOBAL CONCEPTS LTD, RAREGEODE COMPANY LIMITED, LARBOL SMART CHOICE LIMITED, and TERA PICO VENTURE. Trace: `2026-10-26T20-02-52-561Z-which-suppliers-won-contracts-from-both-the-fede.json`.
+- **Are any federal exercise-book awards suspiciously similar to each other?** The live run found no new similarity lead and confirmed the existing twin-award pair as downgraded to low after the defence review. Trace: `2026-10-26T20-03-21-074Z-are-any-federal-exercise-book-awards-suspiciousl.json`.
+- The separately curated 49.468-second exercise-book run remains in the proof pack at `2026-10-26T09-51-57-644Z-are-the-exercise-book-contracts-in-federal-const.json`.
 
 **Full live setup** (needs Zetaris, which requires registration, and Nightshift, on your machine): see [docs/SETUP.md](docs/SETUP.md).
 
@@ -89,13 +101,19 @@ Expected: `[demo] REPLAYED … saved_rows=239 tool_calls=6 … lead=price-gap-fe
 | Amaka | Illustrative persona |
 | Company-registry or ownership checks | **Not built**: no open API |
 
+## Limitations and responsible use
+- Leads are prompts to verify, not accusations of wrongdoing; human verification is required.
+- Oyo has tenders only, with no awards or suppliers.
+- The World Bank CPI REST table fell back to a Postgres CPI table.
+- Matching is by leaf count, not full specifications.
+
 ## What's next
 More OCDS publishers (any of the 50+ countries that publish in the standard), company-registry checks where open data exists, and export of a lead pack for an editor.
 
 ## Data licences
 - BPP federal, publication 64: ODC-PDDL. The Registry page's licence field points to the BPP licence URL at http://nocopo.bpp.gov.ng/license, but that page was unavailable during verification, so the exact licence text remains a caveat.
 - Osun, publication 118: Open Data Commons Public Domain Dedication and Licence (PDDL).
-- Oyo, publication 106: the Registry lists http://oyostate.gov.ng as the licence URL and flags licence URLs as placeholders in its data-quality notes. The applicable licence is unclear.
+- Oyo, publication 106: The licence field references [http://oyostate.gov.ng](http://oyostate.gov.ng) without naming a specific licence. We use it unmodified, for non-commercial public-interest analysis, and don’t redistribute the raw dataset in this repo.
 - World Bank, Nigeria CPI (`FP.CPI.TOTL`), CC BY 4.0.
 - H-MEM spec and conformance suite: [Meterless](https://github.com/Meterless/Meterless), Apache-2.0.
 

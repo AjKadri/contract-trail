@@ -40,5 +40,26 @@
     "time": "09:51:08",
     "durationMs": 49468,
     "leads": 1
+  },
+  {
+    "file": "2026-10-26T20-01-55-382Z-are-the-exercise-book-contracts-in-federal-const.json",
+    "date": "2026-10-26",
+    "time": "20:01:04",
+    "durationMs": 51288,
+    "leads": 1
+  },
+  {
+    "file": "2026-10-26T20-02-52-561Z-which-suppliers-won-contracts-from-both-the-fede.json",
+    "date": "2026-10-26",
+    "time": "20:02:07",
+    "durationMs": 44738,
+    "leads": 0
+  },
+  {
+    "file": "2026-10-26T20-03-21-074Z-are-any-federal-exercise-book-awards-suspiciousl.json",
+    "date": "2026-10-26",
+    "time": "20:03:01",
+    "durationMs": 19906,
+    "leads": 0
   }
 ]

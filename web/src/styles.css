@@ -63,6 +63,7 @@ textarea:focus { border-bottom: 3px solid var(--accent); }
 .column-heading { justify-content: space-between; align-items: flex-end; margin-bottom: 16px; }
 h2 { font-size: 25px; line-height: .95; letter-spacing: -.02em; }
 .leads-heading { margin-top: 18px; }
+.leads-disclaimer { max-width: 520px; margin-top: 7px; color: var(--muted); font: 10px/1.35 "JetBrains Mono", monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lead-count { color: var(--muted); font-size: 10px; }
 .replayed-badge, .live-badge, .live-indicator { display: inline-block; padding: 5px 8px; background: var(--ink); color: var(--paper); font-size: 9px; letter-spacing: .08em; }
 .live-badge, .live-indicator { background: var(--accent); color: var(--ink); }
