@@ -72,3 +72,7 @@ More OCDS publishers (any of the 50+ countries that publish in the standard), co
 - World Bank, Nigeria CPI (`FP.CPI.TOTL`), CC BY 4.0.
 - H-MEM spec and conformance suite: [Meterless](https://github.com/Meterless/Meterless), Apache-2.0.
 - Code: MIT.
+
+## License
+- Code: MIT. See [LICENSE](LICENSE).
+- Data: OCDS data from BPP (ODC-PDDL), Osun and Oyo, under their publishers' licences. Not covered by MIT.
