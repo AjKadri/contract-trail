@@ -30,6 +30,8 @@ type ModelTrace = {
   returnedModel?: string | null;
   latencyMs?: number;
   status?: string;
+  retryReason?: string;
+  failureKind?: string;
 };
 
 type Trace = {
@@ -94,6 +96,12 @@ function formatDuration(milliseconds: number | undefined): string {
 
 function formatTime(iso: string): string {
   return new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date(iso));
+}
+
+function modelStatusLabel(data: ModelTrace): string {
+  const status = String(data.status ?? "ok").toUpperCase();
+  const reason = data.failureKind ?? data.retryReason;
+  return reason && (status === "RETRY" || status === "ERROR") ? `${status} · ${reason}` : status;
 }
 
 function parsePriceGap(lead: Lead): PriceGap | null {
@@ -259,7 +267,7 @@ function Timeline({ events }: { events: TimelineEvent[] }) {
       const returnedModel = typeof data.returnedModel === "string" ? data.returnedModel : requestedModel;
       const modelDiffers = Boolean(requestedModel && returnedModel && requestedModel !== returnedModel);
       const modelTooltip = modelDiffers ? `requested ${requestedModel}; returned ${returnedModel}` : `requested and returned ${returnedModel}`;
-      return <div className={`timeline-item timeline-${event.type}`} key={event.id}><span className="timeline-index">{String(event.id + 1).padStart(2, "0")}</span><div className="timeline-icon">{eventIcon(event.type)}</div><div className="timeline-content">{event.type === "model_call" ? <div className="timeline-title model-call-line"><span className="timeline-main" title={modelTooltip}>{String(data.role ?? "model").toUpperCase()} · {shortModel(returnedModel)}{modelDiffers ? <span className="model-diff"> · FALLBACK</span> : null} · {formatDuration(data.latencyMs)} · {String(data.status ?? "ok").toUpperCase()}</span></div> : <><div className="timeline-title"><span className="timeline-main" title={fullLeadId}>{eventLabel(event)}</span><span className="timeline-metric">{eventMetric(event)}</span></div><div className="timeline-kind"><span className="timeline-source">{eventSourceLabel(event)}</span><span>{event.type.replaceAll("_", " ")}</span></div></>}{event.type === "tool_call" ? <details><summary>SQL · {datasource(data.sql ?? "")}</summary><pre>{data.sql}</pre></details> : null}{event.type === "critic_challenge" && challenge ? <><p className="timeline-detail"><ExpandableText text={challenge.summary} /></p>{challenge.raw ? <JsonDisclosure label="show JSON" value={challenge.raw} /> : null}</> : null}{event.type === "critic_request" ? <p className="timeline-detail"><span title={fullLeadId}>{shortLeadId(data.leadId)}</span> requested this typed query</p> : null}{event.type === "disposition" ? <p className="timeline-detail"><s>{String(data.before).toUpperCase()}</s> → <strong>{String(data.after ?? "WITHDRAWN").toUpperCase()}</strong> · {data.reason}</p> : null}{event.type === "plan" ? <PlanView value={data} /> : null}</div></div>;
+      return <div className={`timeline-item timeline-${event.type}`} key={event.id}><span className="timeline-index">{String(event.id + 1).padStart(2, "0")}</span><div className="timeline-icon">{eventIcon(event.type)}</div><div className="timeline-content">{event.type === "model_call" ? <div className="timeline-title model-call-line"><span className="timeline-main" title={modelTooltip}>{String(data.role ?? "model").toUpperCase()} · {shortModel(returnedModel)}{modelDiffers ? <span className="model-diff"> · FALLBACK</span> : null} · {formatDuration(data.latencyMs)} · {modelStatusLabel(data as ModelTrace)}</span></div> : <><div className="timeline-title"><span className="timeline-main" title={fullLeadId}>{eventLabel(event)}</span><span className="timeline-metric">{eventMetric(event)}</span></div><div className="timeline-kind"><span className="timeline-source">{eventSourceLabel(event)}</span><span>{event.type.replaceAll("_", " ")}</span></div></>}{event.type === "tool_call" ? <details><summary>SQL · {datasource(data.sql ?? "")}</summary><pre>{data.sql}</pre></details> : null}{event.type === "critic_challenge" && challenge ? <><p className="timeline-detail"><ExpandableText text={challenge.summary} /></p>{challenge.raw ? <JsonDisclosure label="show JSON" value={challenge.raw} /> : null}</> : null}{event.type === "critic_request" ? <p className="timeline-detail"><span title={fullLeadId}>{shortLeadId(data.leadId)}</span> requested this typed query</p> : null}{event.type === "disposition" ? <p className="timeline-detail"><s>{String(data.before).toUpperCase()}</s> → <strong>{String(data.after ?? "WITHDRAWN").toUpperCase()}</strong> · {data.reason}</p> : null}{event.type === "plan" ? <PlanView value={data} /> : null}</div></div>;
     })}
     {!events.length ? <p className="empty-state">The investigation log will appear here as the case runs.</p> : null}
   </div>;

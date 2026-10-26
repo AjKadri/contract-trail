@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { callNightshift, parseJsonArray, parseJsonObject, probeModelCall } from "../src/llm/nightshift.js";
+import { callNightshift, parseJsonArray, parseJsonObject, probeModelCall, timeoutForRole } from "../src/llm/nightshift.js";
 
 describe("M3 Nightshift fallback", () => {
   it("logs one Ultra retry and one Lightning fallback after a timeout", async () => {
@@ -22,6 +22,32 @@ describe("M3 Nightshift fallback", () => {
     expect(result.content).toBe("fallback");
     expect(result.logs.filter((log) => log.status === "retry" && log.requestedModel === "deep-model")).toHaveLength(2);
     expect(result.logs.filter((log) => log.status === "fallback" && log.fallbackOf === "deep-model")).toHaveLength(1);
+    expect(result.logs.filter((log) => log.requestedModel === "deep-model").every((log) => log.failureKind === "timeout" && log.retryReason === "timeout")).toBe(true);
+    vi.unstubAllGlobals();
+  });
+
+  it("uses the role-specific timeouts and keeps a classifier retry within its cap", async () => {
+    expect(timeoutForRole("classifier-critic")).toBe(25_000);
+    expect(timeoutForRole("reporter")).toBe(25_000);
+    expect(timeoutForRole("planner")).toBe(45_000);
+    expect(timeoutForRole("defence-critic")).toBe(45_000);
+
+    let attempts = 0;
+    vi.stubEnv("METERLESS_BASE_URL", "http://meterless.test/v1");
+    vi.stubEnv("METERLESS_RUNTIME_TOKEN", "test-token");
+    vi.stubGlobal("fetch", vi.fn(async (_input: unknown, init?: RequestInit) => {
+      attempts += 1;
+      if (attempts === 1) {
+        return await new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(new DOMException("timed out", "TimeoutError")), { once: true });
+        });
+      }
+      return new Response(JSON.stringify({ model: "fast-model", id: "retry-run", choices: [{ message: { content: "[]" } }] }), { status: 200 });
+    }));
+    const result = await callNightshift({ role: "classifier-critic", model: "fast-model", maxTokens: 2304, retryMaxTokens: 2304, timeoutMs: 5, messages: [{ role: "user", content: "test" }] });
+    expect(result.logs.map((log) => log.maxTokens)).toEqual([2304, 2304]);
+    expect(result.logs[0].failureKind).toBe("timeout");
+    expect(result.logs[0].retryReason).toBe("timeout");
     vi.unstubAllGlobals();
   });
 });
@@ -41,6 +67,19 @@ describe("Nightshift response parsing", () => {
     expect(log.contentLength).toBe(0);
     expect(log.reasoningContentLength).toBeGreaterThan(0);
     expect(log.reasoningTokens).toBe(8);
+    vi.unstubAllGlobals();
+  });
+
+  it("distinguishes empty responses from HTTP errors", async () => {
+    vi.stubEnv("METERLESS_BASE_URL", "http://meterless.test/v1");
+    vi.stubEnv("METERLESS_RUNTIME_TOKEN", "test-token");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ model: "fast-model", choices: [{ message: { content: "" } }] }), { status: 200 })));
+    const empty = await probeModelCall({ role: "classifier-critic", model: "fast-model", maxTokens: 2304, messages: [{ role: "user", content: "test" }] });
+    expect(empty.failureKind).toBe("empty_response");
+
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: "provider unavailable" }), { status: 503 })));
+    const http = await probeModelCall({ role: "classifier-critic", model: "fast-model", maxTokens: 2304, messages: [{ role: "user", content: "test" }] });
+    expect(http.failureKind).toBe("http_error");
     vi.unstubAllGlobals();
   });
 });

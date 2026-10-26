@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { HMEM } from "../src/engines/hmem/index.js";
-import { dismissLead, mapCriticChallenges, shouldRunCriticTool } from "../src/agents/contractTrail.js";
+import { CLASSIFIER_MAX_TOKENS, dismissLead, mapCriticChallenges, shouldRunCriticTool } from "../src/agents/contractTrail.js";
 import { buildToolSelectionPrompt } from "../src/data/queries.js";
 
 const tempDirs: string[] = [];
@@ -15,6 +15,10 @@ afterEach(() => {
 });
 
 describe("M3 dismiss memory", () => {
+  it("keeps the classifier JSON budget at the measured cap", () => {
+    expect(CLASSIFIER_MAX_TOKENS).toBe(2304);
+  });
+
   it("supersedes a lead and exposes the dismissal on the next H-MEM load", () => {
     const dir = mkdtempSync(join(tmpdir(), "contract-trail-m3-"));
     tempDirs.push(dir);

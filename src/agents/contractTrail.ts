@@ -104,6 +104,10 @@ function addModelLogs(trace: RunTrace, logs: ModelCallLog[], output: string, rol
 }
 
 const THINKING_OFF = { enable_thinking: false };
+// Longest observed classifier JSON was 5,953 characters. At roughly four
+// characters per token, 2,304 leaves more than 50% headroom and also caps the
+// retry instead of allowing the generic retry policy to double it.
+export const CLASSIFIER_MAX_TOKENS = 2304;
 
 function memoryBinding(memoryFile?: string): { persistDir: string; file?: string } {
   if (!memoryFile) return { persistDir: HMEM_DIR };
@@ -348,7 +352,7 @@ export async function runContractTrail(question = DEFAULT_QUESTION, options: Run
     if (candidates.length === 0) throw new Error("deterministic validation refused every lead because required evidence tools were not selected");
 
     await Promise.all(candidates.map(async (lead) => {
-      const result = await callAndRecord(trace, { role: "classifier-critic", model: fastModel(), maxTokens: 4096, chatTemplateKwargs: THINKING_OFF, messages: [
+      const result = await callAndRecord(trace, { role: "classifier-critic", model: fastModel(), maxTokens: CLASSIFIER_MAX_TOKENS, retryMaxTokens: CLASSIFIER_MAX_TOKENS, chatTemplateKwargs: THINKING_OFF, messages: [
         { role: "system", content: "You are a classifier critic. detailed thinking off. Return a JSON array of challenges for this lead. Exclude laptop or ThinkPad notebook matches and mixed-item contracts. Do not calculate or change numbers." },
         { role: "user", content: `Question: ${question}\nFederal rows: ${federalContractRows.length}\nEvidence: ${summariseForModel(initial.federal)}\nOyo: ${summariseForModel(initial.oyo)}\nLead: ${leadForModel(lead, initial.comparison)}` },
       ] }, emit);

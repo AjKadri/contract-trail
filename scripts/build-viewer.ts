@@ -18,9 +18,11 @@ rmSync(outputDir, { recursive: true, force: true });
 mkdirSync(traceOutputDir, { recursive: true });
 for (const file of ["index.html", "viewer.js", "viewer.css"]) copyFileSync(join(sourceDir, file), join(outputDir, file));
 
+const curatedNames = readFileSync(join(runsDir, "README.md"), "utf8").match(/^- `([^`]+\.json)`$/gmu)?.map((line) => line.slice(3, -1)) ?? [];
 const traces = readdirSync(runsDir)
   .filter((file) => file.endsWith(".json") && file.includes("-are-the-exercise-book-contracts-in-federal-const"))
   .filter((file) => !file.startsWith("probe-") && !file.includes("-dismiss-"))
+  .filter((file) => curatedNames.length === 0 || curatedNames.includes(file))
   .sort();
 const latest = traces.at(-1);
 if (!latest) throw new Error("No real investigation traces found under runs/");
