@@ -41,6 +41,31 @@ See **[docs/SPONSORS.md](docs/SPONSORS.md)** for exact calls. In short:
 - **Meterless Nightshift:** the only model provider. It uses the OpenAI-compatible Runtime, with pinned model IDs, and the requested model, returned model and request ID are logged for every call.
 - **NVIDIA Nemotron:** Ultra 550B plans and argues the defence; Lightning 30B handles tools, classification and reporting. 8 Nemotron calls per run.
 
+## Dependencies
+- Zetaris local Docker platform 2.4.3.
+- Meterless Nightshift local runtime. Its version is not exposed by the configured endpoint or pinned in this repository.
+- NVIDIA Nemotron 3 Ultra 550B (nvidia/nemotron-3-ultra-550b-a55b) and 3.5 Lightning 30B (nvidia/nemotron-3.5-lightning-30b-a3b).
+- PostgreSQL 16 via the postgres:16-alpine Docker image.
+- Node.js 24.15.0 in the verified development environment.
+- Fastify 5.12.7, MIT.
+- React 19.3.1, MIT. React DOM 19.3.1, MIT.
+- Vite 7.3.7, MIT.
+- Vitest 5.0.5, MIT.
+
+## Pre-existing components
+None of the application code existed before the event. It was built from 24-27
+October 2026.
+
+Built on:
+
+- Zetaris.
+- Meterless Nightshift.
+- The Meterless H-MEM specification and conformance suite, Apache-2.0. The
+  repository contains no vendored Meterless files. A local vendor/meterless/
+  checkout is gitignored and used only for conformance.
+- NVIDIA Nemotron.
+- The Open Contracting Data Standard.
+
 ## Check it yourself
 **No setup (replayed real run):**
 ```sh
@@ -50,7 +75,7 @@ SAMPLE_MODE=true npm run demo      # REPLAYED: real recorded Zetaris rows and Ne
 ```
 Expected: `[demo] REPLAYED … saved_rows=239 tool_calls=6 … lead=price-gap-federal-vs-oyo severity=medium`.
 
-- **Run records:** [`runs/`](runs/) holds 5 real live sessions. Each includes the SQL text, row counts, timings, model IDs, critic challenges and disposition changes.
+- **Run records:** [`runs/`](runs/) holds 6 curated real live sessions. Each includes the SQL text, row counts, timings, model IDs, critic challenges and disposition changes.
 - **Verify any number:** every evidence ID links to its record on data.open-contracting.org, and every lead shows its arithmetic.
 
 **Full live setup** (needs Zetaris, which requires registration, and Nightshift, on your machine): see [docs/SETUP.md](docs/SETUP.md).
@@ -67,12 +92,13 @@ Expected: `[demo] REPLAYED … saved_rows=239 tool_calls=6 … lead=price-gap-fe
 ## What's next
 More OCDS publishers (any of the 50+ countries that publish in the standard), company-registry checks where open data exists, and export of a lead pack for an editor.
 
-## Data and licences
-- Procurement data via the Open Contracting Partnership's [Data Registry](https://data.open-contracting.org/): Nigeria Bureau of Public Procurement (published under the [ODC Public Domain Dedication and Licence](https://nocopo.bpp.gov.ng/license)), Osun State, Oyo State (publisher terms apply).
+## Data licences
+- BPP federal, publication 64: ODC-PDDL. The Registry page's licence field points to the BPP licence URL at http://nocopo.bpp.gov.ng/license, but that page was unavailable during verification, so the exact licence text remains a caveat.
+- Osun, publication 118: Open Data Commons Public Domain Dedication and Licence (PDDL).
+- Oyo, publication 106: the Registry lists http://oyostate.gov.ng as the licence URL and flags licence URLs as placeholders in its data-quality notes. The applicable licence is unclear.
 - World Bank, Nigeria CPI (`FP.CPI.TOTL`), CC BY 4.0.
 - H-MEM spec and conformance suite: [Meterless](https://github.com/Meterless/Meterless), Apache-2.0.
-- Code: MIT.
 
-## License
-- Code: MIT. See [LICENSE](LICENSE).
-- Data: OCDS data from BPP (ODC-PDDL), Osun and Oyo, under their publishers' licences. Not covered by MIT.
+## Licence
+- Code: Apache-2.0. See [LICENSE](LICENSE).
+- Data: OCDS data remains under its publishers' licences and is not covered by Apache-2.0.

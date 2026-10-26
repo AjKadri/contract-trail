@@ -1,0 +1,22 @@
+Contract Trail
+Copyright (c) 2026 AjKadri
+
+The original application code in this repository is licensed under the
+Apache License, Version 2.0. See LICENSE.
+
+This notice records third-party technologies, specifications, and data
+referenced by the application. It does not grant rights to third-party
+services, models, standards, or datasets. Those remain subject to their own
+terms:
+
+* Zetaris local Docker platform 2.4.3.
+* Meterless Nightshift.
+* NVIDIA Nemotron 3 Ultra 550B and 3.5 Lightning 30B.
+* PostgreSQL 16.
+* Node.js 24.
+* The Meterless H-MEM specification and conformance suite, Apache-2.0.
+  No Meterless files are committed to this repository. A local, gitignored
+  checkout is used for conformance.
+* The Open Contracting Data Standard.
+* Procurement datasets from the Nigeria Bureau of Public Procurement, Osun
+  State, and Oyo State, under the publisher licences documented in README.md.
