@@ -2,7 +2,7 @@
   "version": 2,
   "mode": "LIVE",
   "question": "Are the exercise-book contracts in federal constituency projects priced fairly compared with what states pay?",
-  "startedAt": "2026-10-25T14:09:08.303Z",
+  "startedAt": "2026-10-26T09:51:08.174Z",
   "plan": {
     "plan": [
       {
@@ -198,8 +198,8 @@
       "params": {},
       "sql": "SELECT c.id, c.main_ocid, c.main_id, c.title, c.dateSigned, c.value_amount, c.value_currency FROM bpp_pg.bpp_contracts c WHERE lower(c.title) LIKE '%exercise book%' OR lower(c.title) LIKE '%notebook%' OR lower(c.title) LIKE '%note book%' ORDER BY c.dateSigned DESC, c.id DESC",
       "limit": 500,
-      "startedAt": "2026-10-25T14:09:45.324Z",
-      "durationMs": 839,
+      "startedAt": "2026-10-26T09:51:32.648Z",
+      "durationMs": 792,
       "rowCount": 21,
       "resultRows": [
         [
@@ -400,8 +400,8 @@
       "params": {},
       "sql": "SELECT c.id, c.main_ocid, c.main_id, c.title, c.dateSigned, c.value_amount, c.value_currency, i.id, i.quantity, i.description, i.contracts_id FROM bpp_pg.bpp_contracts c JOIN bpp_pg.bpp_contracts_items i ON i.main_ocid = c.main_ocid AND i.main_id = c.main_id AND i.contracts_id = c.id WHERE (lower(c.title) LIKE '%exercise book%' OR lower(c.title) LIKE '%notebook%' OR lower(c.title) LIKE '%note book%') ORDER BY c.dateSigned DESC, c.id DESC, i.id",
       "limit": 2000,
-      "startedAt": "2026-10-25T14:09:46.163Z",
-      "durationMs": 2086,
+      "startedAt": "2026-10-26T09:51:33.440Z",
+      "durationMs": 2058,
       "rowCount": 58,
       "resultRows": [
         [
@@ -1167,8 +1167,8 @@
       "params": {},
       "sql": "SELECT ocid, id, date, tender_title, tender_value_amount, tender_value_currency, buyer_name, tender_procuringEntity_name FROM states_pg.oyo_main WHERE lower(tender_title) LIKE '%exercise book%' OR lower(tender_title) LIKE '%notebook%' OR lower(tender_title) LIKE '%note book%' ORDER BY date DESC, id DESC",
       "limit": 500,
-      "startedAt": "2026-10-25T14:09:48.249Z",
-      "durationMs": 531,
+      "startedAt": "2026-10-26T09:51:35.498Z",
+      "durationMs": 518,
       "rowCount": 29,
       "resultRows": [
         [
@@ -1470,8 +1470,8 @@
       "params": {},
       "sql": "SELECT date, value, indicator_id, indicator_name FROM states_pg.world_bank_cpi WHERE countryiso3code = 'NGA' AND value IS NOT NULL ORDER BY date ASC",
       "limit": 100,
-      "startedAt": "2026-10-25T14:09:48.780Z",
-      "durationMs": 210,
+      "startedAt": "2026-10-26T09:51:36.016Z",
+      "durationMs": 160,
       "rowCount": 66,
       "resultRows": [
         [
@@ -1879,8 +1879,8 @@
       "params": {},
       "sql": "SELECT b.name AS supplier, count(DISTINCT b.main_ocid) AS bpp_awards, count(DISTINCT o.main_ocid) AS osun_awards FROM bpp_pg.bpp_awards_suppliers b JOIN states_pg.osun_awards_suppliers o ON upper(trim(b.name)) = upper(trim(o.name)) GROUP BY b.name ORDER BY bpp_awards DESC",
       "limit": 50,
-      "startedAt": "2026-10-25T14:09:48.990Z",
-      "durationMs": 783,
+      "startedAt": "2026-10-26T09:51:36.176Z",
+      "durationMs": 632,
       "rowCount": 7,
       "resultRows": [
         [
@@ -1935,8 +1935,8 @@
       },
       "sql": "SELECT c.id, c.main_ocid, c.main_id, c.title, c.dateSigned, c.value_amount, c.value_currency, i.id, i.quantity, i.description, i.contracts_id FROM bpp_pg.bpp_contracts c JOIN bpp_pg.bpp_contracts_items i ON i.main_ocid = c.main_ocid AND i.main_id = c.main_id AND i.contracts_id = c.id WHERE (lower(c.title) LIKE '%exercise book%' OR lower(c.title) LIKE '%notebook%' OR lower(c.title) LIKE '%note book%') ORDER BY c.dateSigned DESC, c.id DESC, i.id",
       "limit": 2000,
-      "startedAt": "2026-10-25T14:10:02.529Z",
-      "durationMs": 6038,
+      "startedAt": "2026-10-26T09:51:46.712Z",
+      "durationMs": 1033,
       "rowCount": 58,
       "resultRows": [
         [
@@ -2703,13 +2703,13 @@
       "role": "planner",
       "requestedModel": "nvidia/nemotron-3-ultra-550b-a55b",
       "returnedModel": "nvidia/nemotron-3-ultra-550b-a55b",
-      "latencyMs": 36214,
+      "latencyMs": 23533,
       "maxTokens": 4096,
       "tokens": 4625,
       "finishReason": "stop",
       "contentLength": 3736,
       "reasoningContentLength": 0,
-      "receiptOrRunId": "chatcmpl-7yffxsinmvnwlryt",
+      "receiptOrRunId": "chatcmpl-r1zu10z4mvp2tu3q",
       "status": "ok",
       "output": "{\n  \"plan\": [\n    {\n      \"step\": 1,\n      \"name\": \"search_federal_contracts\",\n      \"description\": \"Retrieve federal constituency project exercise-book contracts (2020-2024)\",\n      \"tool\": \"searchFederalBookContracts\",\n      \"parameters\": {\n        \"year_range\": \"2020-2024\",\n        \"spec_filters\": [\"leaves\", \"gsm\", \"cover_type\"]\n      },\n      \"outputs\": [\"contract_id\", \"constituency\", \"state\", \"award_year\", \"supplier\", \"quantity\", \"total_value\", \"spec_summary\"]\n    },\n    {\n      \"step\": 2,\n      \"name\": \"search_oyo_contracts\",\n      \"description\": \"Retrieve Oyo state exercise-book procurement contracts (2020-2024)\",\n      \"tool\": \"searchOyoBookContracts\",\n      \"parameters\": {\n        \"year_range\": \"2020-2024\",\n        \"spec_filters\": [\"leaves\", \"gsm\", \"cover_type\"]\n      },\n      \"outputs\": [\"contract_id\", \"award_year\", \"supplier\", \"quantity\", \"total_value\", \"spec_summary\"]\n    },\n    {\n      \"step\": 3,\n      \"name\": \"get_federal_items\",\n      \"description\": \"Fetch detailed line items for federal contracts\",\n      \"tool\": \"getFederalBookContractItems\",\n      \"parameters\": {\n        \"contract_ids\": \"from_step_1\"\n      },\n      \"outputs\": [\"contract_id\", \"item_id\", \"leaves\", \"gsm\", \"cover_type\", \"size\", \"binding\", \"unit_price\", \"quantity\"]\n    },\n    {\n      \"step\": 4,\n      \"name\": \"get_oyo_items\",\n      \"description\": \"Fetch detailed line items for Oyo contracts\",\n      \"tool\": \"searchOyoBookContracts\",\n      \"parameters\": {\n        \"contract_ids\": \"from_step_2\",\n        \"include_items\": true\n      },\n      \"outputs\": [\"contract_id\", \"item_id\", \"leaves\", \"gsm\", \"cover_type\", \"size\", \"binding\", \"unit_price\", \"quantity\"]\n    },\n    {\n      \"step\": 5,\n      \"name\": \"standardize_specs\",\n      \"description\": \"Normalize specifications into comparable tiers\",\n      \"rule\": \"Create spec_key = leaves|gsm|cover_type|size|binding; group by spec_key\"\n    },\n    {\n      \"step\": 6,\n      \"name\": \"cpi_adjustment\",\n      \"description\": \"Adjust all unit prices to constant 2024 NGN\",\n      \"tool\": \"getNigeriaCpi\",\n      \"parameters\": {\n        \"years\": \"2020-2024\"\n      },\n      \"calculation\": \"real_price_2024 = nominal_price * (CPI_2024 / CPI_award_year)\"\n    },\n    {\n      \"step\": 7,\n      \"name\": \"deduplicate\",\n      \"description\": \"Remove duplicate contract lines\",\n      \"keys\": [\"contract_id\", \"item_id\", \"supplier\", \"spec_key\", \"quantity\", \"unit_price\"],\n      \"rule\": \"Keep first; log duplicates\"\n    },\n    {\n      \"step\": 8,\n      \"name\": \"twin_award_check\",\n      \"description\": \"Flag twin awards: same spec, year, constituency/state, similar quantity/price to different suppliers\",\n      \"match_fields\": [\"jurisdiction\", \"award_year\", \"spec_key\"],\n      \"tolerances\": {\n        \"quantity_pct\": 5,\n        \"price_pct\": 10\n      },\n      \"output\": \"twin_group_id, twin_flag\"\n    },\n    {\n      \"step\": 9,\n      \"name\": \"benchmark_comparison\",\n      \"description\": \"Compare federal vs Oyo median real prices by spec_key and year\",\n      \"group_by\": [\"spec_key\", \"award_year\", \"jurisdiction\"],\n      \"metrics\": [\"median_real_price_2024\", \"p25\", \"p75\", \"count\"],\n      \"comparison\": \"federal_median vs oyo_median per spec_key-year\"\n    },\n    {\n      \"step\": 10,\n      \"name\": \"cross_publisher_supplier_check\",\n      \"description\": \"Check if same suppliers appear across federal and Oyo contracts\",\n      \"tool\": \"getCrossPublisherSuppliers\",\n      \"parameters\": {\n        \"federal_suppliers\": \"from_step_1\",\n        \"oyo_suppliers\": \"from_step_2\"\n      },\n      \"output\": \"common_suppliers, supplier_jurisdiction_map\"\n    }\n  ],\n  \"tools\": [\n    \"searchFederalBookContracts\",\n    \"getFederalBookContractItems\",\n    \"searchOyoBookContracts\",\n    \"getNigeriaCpi\",\n    \"getCrossPublisherSuppliers\"\n  ]\n}"
     },
@@ -2717,13 +2717,13 @@
       "role": "data-agent",
       "requestedModel": "nvidia/nemotron-3.5-lightning-30b-a3b",
       "returnedModel": "nvidia/nemotron-3.5-lightning-30b-a3b",
-      "latencyMs": 805,
+      "latencyMs": 938,
       "maxTokens": 4096,
       "tokens": 4437,
       "finishReason": "stop",
       "contentLength": 173,
       "reasoningContentLength": 0,
-      "receiptOrRunId": "chatcmpl-33zblh60mvnwmjwp",
+      "receiptOrRunId": "chatcmpl-g3xw410lmvp2uc8y",
       "status": "ok",
       "output": "{\n  \"tools\": [\n    \"searchFederalBookContracts\",\n    \"getFederalBookContractItems\",\n    \"searchOyoBookContracts\",\n    \"getNigeriaCpi\",\n    \"getCrossPublisherSuppliers\"\n  ]\n}"
     },
@@ -2731,55 +2731,41 @@
       "role": "classifier-critic",
       "requestedModel": "nvidia/nemotron-3.5-lightning-30b-a3b",
       "returnedModel": "nvidia/nemotron-3.5-lightning-30b-a3b",
-      "latencyMs": 3060,
-      "maxTokens": 4096,
-      "tokens": 6837,
+      "latencyMs": 3180,
+      "maxTokens": 2304,
+      "tokens": 6840,
       "finishReason": "stop",
-      "contentLength": 700,
+      "contentLength": 811,
       "reasoningContentLength": 0,
-      "receiptOrRunId": "chatcmpl-jo7gwx7tmvnwmnyw",
+      "receiptOrRunId": "chatcmpl-7ke54raimvp2ug7q",
       "status": "ok",
-      "output": "[\n  {\n    \"leadId\": \"price-gap-federal-vs-oyo\",\n    \"challenge\": \"Federal contracts span 2021–2024 with varying leaf counts (20, 40, 60, 80, 100) and explicit distribution clauses (\\\"SUPPLY AND DISTRIBUTION\\\" or \\\"PRINTING AND SUPPLY\\\"), while Oyo contracts are bulk procurement of 200k+ copies per lot from 2019–2022. Federal lot sizes are 8k–74k versus Oyo's 200k+, implying significant economies of scale for Oyo. Federal contracts include 100-leaf books and customization to specific constituencies/LGAs; Oyo contracts are state-wide with uniform 60/80-leaf specifications. CPI adjustment and leaf-count matching do not resolve these structural differences.\",\n    \"disposition\": \"downgrade\"\n  }\n]"
+      "output": "[\n  {\n    \"leadId\": \"price-gap-federal-vs-oyo\",\n    \"challenge\": \"Federal contracts include 100-leaf books and mixed leaf counts per lot, while Oyo contracts are exclusively 60- and 80-leaf. Federal lot sizes are 8k–74k vs Oyo's 200k+ per lot, losing economies of scale. Federal contracts span 2023–2024 vs Oyo's 2022 (CPI-adjusted to 2025). Federal titles explicitly mention \\\"SUPPLY AND DISTRIBUTION\\\" or \\\"PRINTING AND SUPPLY\\\" to dispersed schools across constituencies/LGAs, while Oyo contracts appear to be bulk procurement without last-mile delivery. Paper quality, cover weight, colour printing, and geographic spread are not captured in leaf count alone. These specification, distribution, and scale differences could plausibly explain a large portion of the gap.\",\n    \"disposition\": \"downgrade\"\n  }\n]"
     },
     {
       "role": "classifier-critic",
       "requestedModel": "nvidia/nemotron-3.5-lightning-30b-a3b",
       "returnedModel": "nvidia/nemotron-3.5-lightning-30b-a3b",
-      "latencyMs": 6061,
-      "maxTokens": 4096,
-      "tokens": 5589,
+      "latencyMs": 6696,
+      "maxTokens": 2304,
+      "tokens": 5612,
       "finishReason": "stop",
-      "contentLength": 1603,
+      "contentLength": 1595,
       "reasoningContentLength": 0,
-      "receiptOrRunId": "chatcmpl-o75qw81cmvnwmnyu",
+      "receiptOrRunId": "chatcmpl-haxl0hydmvp2ug7x",
       "status": "ok",
-      "output": "[\n  {\n    \"leadId\": \"price-gap-federal-vs-oyo\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"The 5.16× price gap on matched 60- and 80-leaf books persists after CPI adjustment, but several legitimate factors remain unresolved: federal contracts include explicit distribution to dispersed schools across constituencies/LGAs (titles mention \\\"SUPPLY AND DISTRIBUTION\\\" or \\\"PRINTING AND SUPPLY\\\"), while Oyo contracts appear to be bulk procurement without last-mile delivery; federal lot sizes are 8k–74k versus Oyo's 200k+ per lot, implying significant economies of scale for Oyo; federal contracts span 2021–2024 with varying specifications (some include 20/40/100 leaves, customization levels, cover weight, colour printing not captured by leaf count alone); and geographic spread differs (federal to specific constituencies, Oyo state-wide). Without detailed spec sheets, paper quality, cover GSM, printing colours, and delivery distance breakdowns, the gap cannot be attributed solely to overpricing.\"\n  },\n  {\n    \"leadId\": \"twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"The two federal contracts on 2024-10-15 for 8,200 books each have near-identical values (difference 0.327%) and appear to be separate lots for different school clusters (Tudun/S vs Galadimawa II) with the same leaf specification [60,80,100]. The slight value difference may reflect minor specification or delivery distance variations. No evidence of duplicate release or invalid evidence; the contracts are distinguishable by location.\"\n  }\n]"
+      "output": "[\n  {\n    \"leadId\": \"price-gap-federal-vs-oyo\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"The 5.16× price gap on matched 60- and 80-leaf books persists after CPI adjustment, but several legitimate factors remain unresolved: federal contracts include explicit distribution to dispersed schools across constituencies/LGAs (titles mention \\\"SUPPLY AND DISTRIBUTION\\\" or \\\"PRINTING AND SUPPLY\\\"), while Oyo contracts appear to be bulk procurement without last-mile delivery; federal lot sizes are 8k–74k vs Oyo's 200k+ per lot, losing economies of scale; federal contracts span 2023–2024 vs Oyo's 2022 (CPI-adjusted to 2025); federal specs include 100-leaf books and mixed leaf counts per lot, suggesting higher customization; and paper quality, cover weight, colour printing, and geographic spread are not captured in leaf count alone. These specification, distribution, and scale differences could plausibly explain a large portion of the gap.\"\n  },\n  {\n    \"leadId\": \"twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"The two federal contracts share the same date (2024-10-15) and quantity (8,200) with near-identical values (0.327% difference), but they are for different school clusters: \\\"PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED SCHOOLS IN TUDUN/S\\\" versus \\\"PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED SCHOOLS IN GALADIMAWA II\\\". These appear to be separate lots or releases for distinct geographic areas, which is a legitimate procurement explanation rather than a duplicate release.\"\n  }\n]"
     },
     {
       "role": "defence-critic",
       "requestedModel": "nvidia/nemotron-3-ultra-550b-a55b",
       "returnedModel": "nvidia/nemotron-3-ultra-550b-a55b",
-      "latencyMs": 6494,
+      "latencyMs": 2800,
       "maxTokens": 4096,
-      "tokens": 6969,
-      "finishReason": "stop",
-      "contentLength": 1057,
-      "reasoningContentLength": 0,
-      "receiptOrRunId": "chatcmpl-j4hmjcvzmvnwmsn6",
-      "status": "ok",
-      "output": "[\n  {\n    \"leadId\": \"price-gap-federal-vs-oyo\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"A leaf-matched comparison exists for 60- and 80-leaf books (federal median ~2,953 NGN vs Oyo median ~572 NGN, ~5.2× gap). However, several legitimate factors remain unresolved: federal contracts explicitly include distribution to dispersed schools across constituencies/LGAs (titles mention \\\"SUPPLY AND DISTRIBUTION\\\" or \\\"PRINTING AND SUPPLY\\\"), while Oyo contracts appear to be bulk procurement without last-mile delivery; federal lot sizes are 8k–74k versus Oyo's 200k+ per lot, implying significant economies of scale for Oyo; federal contracts span 2021–2024 with varying specifications (some include 20/40/100 leaves, customization levels, cover weight, colour printing not captured by leaf count alone); and geographic spread differs (federal to specific constituencies, Oyo state-wide). Without detailed spec sheets, paper quality, cover GSM, printing colours, and delivery distance breakdowns, the gap cannot be attributed solely to overpricing.\"\n  }\n]"
-    },
-    {
-      "role": "defence-critic",
-      "requestedModel": "nvidia/nemotron-3-ultra-550b-a55b",
-      "returnedModel": "nvidia/nemotron-3-ultra-550b-a55b",
-      "latencyMs": 6690,
-      "maxTokens": 4096,
-      "tokens": 6617,
+      "tokens": 6613,
       "finishReason": "stop",
       "contentLength": 707,
       "reasoningContentLength": 0,
-      "receiptOrRunId": "chatcmpl-w2x6l958mvnwmsnb",
+      "receiptOrRunId": "chatcmpl-g2c7147emvp2ule3",
       "status": "ok",
       "output": "[\n  {\n    \"leadId\": \"twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"The two awards share the same date (2024-10-15) and quantity (8,200 books) with near-identical unit prices (~2,953–2,963 NGN/book), but their titles reference different locations (\\\"TUDUN/S\\\" vs \\\"GALADIMAWA II\\\"). This is consistent with separate lots for distinct school clusters or wards within a constituency, each tendered or awarded in parallel. The 0.33% value difference falls within normal rounding or minor spec variance (e.g., cover weight, delivery distance). No evidence suggests duplicate payment or a single contract split improperly.\"\n  }\n]"
     },
@@ -2787,58 +2773,63 @@
       "role": "defence-critic",
       "requestedModel": "nvidia/nemotron-3-ultra-550b-a55b",
       "returnedModel": "nvidia/nemotron-3-ultra-550b-a55b",
-      "latencyMs": 9805,
+      "latencyMs": 3166,
       "maxTokens": 4096,
-      "tokens": 7030,
+      "tokens": 6941,
       "finishReason": "stop",
-      "contentLength": 957,
+      "contentLength": 953,
       "reasoningContentLength": 0,
-      "receiptOrRunId": "chatcmpl-vzy39usfmvnwn2tm",
+      "receiptOrRunId": "chatcmpl-4sug1l1umvp2uldq",
       "status": "ok",
-      "output": "[\n  {\n    \"leadId\": \"price-gap-federal-vs-oyo\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"The 5.16× price gap on matched 60- and 80-leaf books persists after CPI adjustment, but several legitimate factors remain unresolved: federal contracts include explicit distribution to dispersed schools across constituencies/LGAs (titles mention \\\"SUPPLY AND DISTRIBUTION\\\" or \\\"PRINTING AND SUPPLY\\\"), while Oyo contracts appear to be bulk procurement without last-mile delivery; federal lot sizes are 8k–74k versus Oyo's 200k+ per lot, implying significant economies of scale for the state; federal contracts span 2023–2024 versus Oyo's 2022 (CPI-adjusted), during which paper and fuel costs rose sharply; and specifications such as cover weight, paper GSM, colour printing, and customization level are not captured in the leaf count alone. These specification, distribution, and scale differences could plausibly account for a large portion of the gap.\"\n  }\n]"
+      "output": "[\n  {\n    \"leadId\": \"price-gap-federal-vs-oyo\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"The 5.16× price gap on matched 60- and 80-leaf books persists after CPI adjustment, but several legitimate factors remain unresolved: federal contracts include explicit distribution to dispersed schools across constituencies/LGAs (titles mention \\\"SUPPLY AND DISTRIBUTION\\\" or \\\"PRINTING AND SUPPLY\\\"), while Oyo contracts appear to be bulk procurement without last-mile delivery; federal lot sizes are 8k–74k vs Oyo's 200k+ per lot, losing economies of scale; federal contracts span 2023–2024 vs Oyo's 2022 (CPI-adjusted to 2025); federal specs include 100-leaf books and mixed leaf counts per lot, suggesting higher customization; and paper quality, cover weight, colour printing, and geographic spread are not captured in leaf count alone. These specification, distribution, and scale differences could plausibly explain a large portion of the gap.\"\n  }\n]"
+    },
+    {
+      "role": "defence-critic",
+      "requestedModel": "nvidia/nemotron-3-ultra-550b-a55b",
+      "returnedModel": "nvidia/nemotron-3-ultra-550b-a55b",
+      "latencyMs": 5271,
+      "maxTokens": 4096,
+      "tokens": 7056,
+      "finishReason": "stop",
+      "contentLength": 953,
+      "reasoningContentLength": 0,
+      "receiptOrRunId": "chatcmpl-suptlg2rmvp2uomg",
+      "status": "ok",
+      "output": "[\n  {\n    \"leadId\": \"price-gap-federal-vs-oyo\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"The 5.16× price gap on matched 60- and 80-leaf books persists after CPI adjustment, but several legitimate factors remain unresolved: federal contracts include explicit distribution to dispersed schools across constituencies/LGAs (titles mention \\\"SUPPLY AND DISTRIBUTION\\\" or \\\"PRINTING AND SUPPLY\\\"), while Oyo contracts appear to be bulk procurement without last-mile delivery; federal lot sizes are 8k–74k vs Oyo's 200k+ per lot, losing economies of scale; federal contracts span 2023–2024 vs Oyo's 2022 (CPI-adjusted to 2025); federal specs include 100-leaf books and mixed leaf counts per lot, suggesting higher customization; and paper quality, cover weight, colour printing, and geographic spread are not captured in leaf count alone. These specification, distribution, and scale differences could plausibly explain a large portion of the gap.\"\n  }\n]"
     },
     {
       "role": "reporter",
       "requestedModel": "nvidia/nemotron-3.5-lightning-30b-a3b",
       "returnedModel": "nvidia/nemotron-3.5-lightning-30b-a3b",
-      "latencyMs": 18906,
+      "latencyMs": 4617,
       "maxTokens": 4096,
-      "tokens": 5269,
+      "tokens": 4918,
       "finishReason": "stop",
-      "contentLength": 1656,
+      "contentLength": 1451,
       "reasoningContentLength": 0,
-      "receiptOrRunId": "chatcmpl-n51hyorimvnwna1o",
+      "receiptOrRunId": "chatcmpl-2edpwrywmvp2usp1",
       "status": "ok",
-      "output": "[\n  {\n    \"leadId\": \"price-gap-federal-vs-oyo\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"The 5.16× price gap on matched 60- and 80-leaf books persists after CPI adjustment, but several legitimate factors remain unresolved: federal contracts include explicit distribution to dispersed schools across constituencies/LGAs (titles mention \\\"SUPPLY AND DISTRIBUTION\\\" or \\\"PRINTING AND SUPPLY\\\"), while Oyo contracts appear to be bulk procurement without last-mile delivery; federal lot sizes are 8k–74k versus Oyo's 200k+ per lot, implying significant economies of scale for Oyo; federal contracts span 2023–2024 versus Oyo's 2022 (CPI-adjusted), during which paper and fuel costs rose sharply; and specifications such as cover weight, paper GSM, colour printing, and customization level are not captured in the leaf count alone. These specification, distribution, and scale differences could plausibly account for a large portion of the gap.\"\n  },\n  {\n    \"leadId\": \"twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"The two awards share the same date (2024-10-15) and quantity (8,200 books) with near-identical unit prices (~2,953–2,963 NGN/book), but their titles reference different locations (\\\"TUDUN/S\\\" vs \\\"GALADIMAWA II\\\"). This is consistent with separate lots for distinct school clusters or wards within a constituency, each tendered or awarded in parallel. The 0.33% value difference falls within normal rounding or minor spec variance (e.g., cover weight, delivery distance). No evidence suggests duplicate payment or a single contract split improperly.\"\n  }\n]"
+      "output": "[\n  {\n    \"leadId\": \"price-gap-federal-vs-oyo\",\n    \"challenge\": \"Federal contracts include 100-leaf books and mixed leaf counts per lot, while Oyo contracts are exclusively 60- and 80-leaf. Federal lot sizes are 8k–74k vs Oyo's 200k+ per lot, losing economies of scale. Federal contracts span 2023–2024 vs Oyo's 2022 (CPI-adjusted to 2025). Federal titles explicitly mention \\\"SUPPLY AND DISTRIBUTION\\\" or \\\"PRINTING AND SUPPLY\\\" to dispersed schools across constituencies/LGAs, while Oyo contracts appear to be bulk procurement without last-mile delivery. Paper quality, cover weight, colour printing, and geographic spread are not captured in leaf count alone. These specification, distribution, and scale differences could plausibly explain a large portion of the gap.\",\n    \"disposition\": \"downgrade\"\n  },\n  {\n    \"leadId\": \"twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613\",\n    \"challenge\": \"The two awards share the same date (2024-10-15) and quantity (8,200 books) with near-identical values (0.327% difference), but they are for different school clusters: \\\"PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED SCHOOLS IN TUDUN/S\\\" versus \\\"PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED SCHOOLS IN GALADIMAWA II\\\". These appear to be separate lots or releases for distinct geographic areas, which is a legitimate procurement explanation rather than a duplicate release.\",\n    \"disposition\": \"downgrade\"\n  }\n]"
     }
   ],
   "modelOutputs": {
     "planner": "{\n  \"plan\": [\n    {\n      \"step\": 1,\n      \"name\": \"search_federal_contracts\",\n      \"description\": \"Retrieve federal constituency project exercise-book contracts (2020-2024)\",\n      \"tool\": \"searchFederalBookContracts\",\n      \"parameters\": {\n        \"year_range\": \"2020-2024\",\n        \"spec_filters\": [\"leaves\", \"gsm\", \"cover_type\"]\n      },\n      \"outputs\": [\"contract_id\", \"constituency\", \"state\", \"award_year\", \"supplier\", \"quantity\", \"total_value\", \"spec_summary\"]\n    },\n    {\n      \"step\": 2,\n      \"name\": \"search_oyo_contracts\",\n      \"description\": \"Retrieve Oyo state exercise-book procurement contracts (2020-2024)\",\n      \"tool\": \"searchOyoBookContracts\",\n      \"parameters\": {\n        \"year_range\": \"2020-2024\",\n        \"spec_filters\": [\"leaves\", \"gsm\", \"cover_type\"]\n      },\n      \"outputs\": [\"contract_id\", \"award_year\", \"supplier\", \"quantity\", \"total_value\", \"spec_summary\"]\n    },\n    {\n      \"step\": 3,\n      \"name\": \"get_federal_items\",\n      \"description\": \"Fetch detailed line items for federal contracts\",\n      \"tool\": \"getFederalBookContractItems\",\n      \"parameters\": {\n        \"contract_ids\": \"from_step_1\"\n      },\n      \"outputs\": [\"contract_id\", \"item_id\", \"leaves\", \"gsm\", \"cover_type\", \"size\", \"binding\", \"unit_price\", \"quantity\"]\n    },\n    {\n      \"step\": 4,\n      \"name\": \"get_oyo_items\",\n      \"description\": \"Fetch detailed line items for Oyo contracts\",\n      \"tool\": \"searchOyoBookContracts\",\n      \"parameters\": {\n        \"contract_ids\": \"from_step_2\",\n        \"include_items\": true\n      },\n      \"outputs\": [\"contract_id\", \"item_id\", \"leaves\", \"gsm\", \"cover_type\", \"size\", \"binding\", \"unit_price\", \"quantity\"]\n    },\n    {\n      \"step\": 5,\n      \"name\": \"standardize_specs\",\n      \"description\": \"Normalize specifications into comparable tiers\",\n      \"rule\": \"Create spec_key = leaves|gsm|cover_type|size|binding; group by spec_key\"\n    },\n    {\n      \"step\": 6,\n      \"name\": \"cpi_adjustment\",\n      \"description\": \"Adjust all unit prices to constant 2024 NGN\",\n      \"tool\": \"getNigeriaCpi\",\n      \"parameters\": {\n        \"years\": \"2020-2024\"\n      },\n      \"calculation\": \"real_price_2024 = nominal_price * (CPI_2024 / CPI_award_year)\"\n    },\n    {\n      \"step\": 7,\n      \"name\": \"deduplicate\",\n      \"description\": \"Remove duplicate contract lines\",\n      \"keys\": [\"contract_id\", \"item_id\", \"supplier\", \"spec_key\", \"quantity\", \"unit_price\"],\n      \"rule\": \"Keep first; log duplicates\"\n    },\n    {\n      \"step\": 8,\n      \"name\": \"twin_award_check\",\n      \"description\": \"Flag twin awards: same spec, year, constituency/state, similar quantity/price to different suppliers\",\n      \"match_fields\": [\"jurisdiction\", \"award_year\", \"spec_key\"],\n      \"tolerances\": {\n        \"quantity_pct\": 5,\n        \"price_pct\": 10\n      },\n      \"output\": \"twin_group_id, twin_flag\"\n    },\n    {\n      \"step\": 9,\n      \"name\": \"benchmark_comparison\",\n      \"description\": \"Compare federal vs Oyo median real prices by spec_key and year\",\n      \"group_by\": [\"spec_key\", \"award_year\", \"jurisdiction\"],\n      \"metrics\": [\"median_real_price_2024\", \"p25\", \"p75\", \"count\"],\n      \"comparison\": \"federal_median vs oyo_median per spec_key-year\"\n    },\n    {\n      \"step\": 10,\n      \"name\": \"cross_publisher_supplier_check\",\n      \"description\": \"Check if same suppliers appear across federal and Oyo contracts\",\n      \"tool\": \"getCrossPublisherSuppliers\",\n      \"parameters\": {\n        \"federal_suppliers\": \"from_step_1\",\n        \"oyo_suppliers\": \"from_step_2\"\n      },\n      \"output\": \"common_suppliers, supplier_jurisdiction_map\"\n    }\n  ],\n  \"tools\": [\n    \"searchFederalBookContracts\",\n    \"getFederalBookContractItems\",\n    \"searchOyoBookContracts\",\n    \"getNigeriaCpi\",\n    \"getCrossPublisherSuppliers\"\n  ]\n}",
     "data-agent": "{\n  \"tools\": [\n    \"searchFederalBookContracts\",\n    \"getFederalBookContractItems\",\n    \"searchOyoBookContracts\",\n    \"getNigeriaCpi\",\n    \"getCrossPublisherSuppliers\"\n  ]\n}",
-    "classifier-critic": "[\n  {\n    \"leadId\": \"price-gap-federal-vs-oyo\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"The 5.16× price gap on matched 60- and 80-leaf books persists after CPI adjustment, but several legitimate factors remain unresolved: federal contracts include explicit distribution to dispersed schools across constituencies/LGAs (titles mention \\\"SUPPLY AND DISTRIBUTION\\\" or \\\"PRINTING AND SUPPLY\\\"), while Oyo contracts appear to be bulk procurement without last-mile delivery; federal lot sizes are 8k–74k versus Oyo's 200k+ per lot, implying significant economies of scale for Oyo; federal contracts span 2021–2024 with varying specifications (some include 20/40/100 leaves, customization levels, cover weight, colour printing not captured by leaf count alone); and geographic spread differs (federal to specific constituencies, Oyo state-wide). Without detailed spec sheets, paper quality, cover GSM, printing colours, and delivery distance breakdowns, the gap cannot be attributed solely to overpricing.\"\n  },\n  {\n    \"leadId\": \"twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"The two federal contracts on 2024-10-15 for 8,200 books each have near-identical values (difference 0.327%) and appear to be separate lots for different school clusters (Tudun/S vs Galadimawa II) with the same leaf specification [60,80,100]. The slight value difference may reflect minor specification or delivery distance variations. No evidence of duplicate release or invalid evidence; the contracts are distinguishable by location.\"\n  }\n]",
-    "defence-critic": "[\n  {\n    \"leadId\": \"price-gap-federal-vs-oyo\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"The 5.16× price gap on matched 60- and 80-leaf books persists after CPI adjustment, but several legitimate factors remain unresolved: federal contracts include explicit distribution to dispersed schools across constituencies/LGAs (titles mention \\\"SUPPLY AND DISTRIBUTION\\\" or \\\"PRINTING AND SUPPLY\\\"), while Oyo contracts appear to be bulk procurement without last-mile delivery; federal lot sizes are 8k–74k versus Oyo's 200k+ per lot, implying significant economies of scale for the state; federal contracts span 2023–2024 versus Oyo's 2022 (CPI-adjusted), during which paper and fuel costs rose sharply; and specifications such as cover weight, paper GSM, colour printing, and customization level are not captured in the leaf count alone. These specification, distribution, and scale differences could plausibly account for a large portion of the gap.\"\n  }\n]",
-    "reporter": "[\n  {\n    \"leadId\": \"price-gap-federal-vs-oyo\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"The 5.16× price gap on matched 60- and 80-leaf books persists after CPI adjustment, but several legitimate factors remain unresolved: federal contracts include explicit distribution to dispersed schools across constituencies/LGAs (titles mention \\\"SUPPLY AND DISTRIBUTION\\\" or \\\"PRINTING AND SUPPLY\\\"), while Oyo contracts appear to be bulk procurement without last-mile delivery; federal lot sizes are 8k–74k versus Oyo's 200k+ per lot, implying significant economies of scale for Oyo; federal contracts span 2023–2024 versus Oyo's 2022 (CPI-adjusted), during which paper and fuel costs rose sharply; and specifications such as cover weight, paper GSM, colour printing, and customization level are not captured in the leaf count alone. These specification, distribution, and scale differences could plausibly account for a large portion of the gap.\"\n  },\n  {\n    \"leadId\": \"twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"The two awards share the same date (2024-10-15) and quantity (8,200 books) with near-identical unit prices (~2,953–2,963 NGN/book), but their titles reference different locations (\\\"TUDUN/S\\\" vs \\\"GALADIMAWA II\\\"). This is consistent with separate lots for distinct school clusters or wards within a constituency, each tendered or awarded in parallel. The 0.33% value difference falls within normal rounding or minor spec variance (e.g., cover weight, delivery distance). No evidence suggests duplicate payment or a single contract split improperly.\"\n  }\n]"
+    "classifier-critic": "[\n  {\n    \"leadId\": \"price-gap-federal-vs-oyo\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"The 5.16× price gap on matched 60- and 80-leaf books persists after CPI adjustment, but several legitimate factors remain unresolved: federal contracts include explicit distribution to dispersed schools across constituencies/LGAs (titles mention \\\"SUPPLY AND DISTRIBUTION\\\" or \\\"PRINTING AND SUPPLY\\\"), while Oyo contracts appear to be bulk procurement without last-mile delivery; federal lot sizes are 8k–74k vs Oyo's 200k+ per lot, losing economies of scale; federal contracts span 2023–2024 vs Oyo's 2022 (CPI-adjusted to 2025); federal specs include 100-leaf books and mixed leaf counts per lot, suggesting higher customization; and paper quality, cover weight, colour printing, and geographic spread are not captured in leaf count alone. These specification, distribution, and scale differences could plausibly explain a large portion of the gap.\"\n  },\n  {\n    \"leadId\": \"twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"The two federal contracts share the same date (2024-10-15) and quantity (8,200) with near-identical values (0.327% difference), but they are for different school clusters: \\\"PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED SCHOOLS IN TUDUN/S\\\" versus \\\"PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED SCHOOLS IN GALADIMAWA II\\\". These appear to be separate lots or releases for distinct geographic areas, which is a legitimate procurement explanation rather than a duplicate release.\"\n  }\n]",
+    "defence-critic": "[\n  {\n    \"leadId\": \"price-gap-federal-vs-oyo\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"The 5.16× price gap on matched 60- and 80-leaf books persists after CPI adjustment, but several legitimate factors remain unresolved: federal contracts include explicit distribution to dispersed schools across constituencies/LGAs (titles mention \\\"SUPPLY AND DISTRIBUTION\\\" or \\\"PRINTING AND SUPPLY\\\"), while Oyo contracts appear to be bulk procurement without last-mile delivery; federal lot sizes are 8k–74k vs Oyo's 200k+ per lot, losing economies of scale; federal contracts span 2023–2024 vs Oyo's 2022 (CPI-adjusted to 2025); federal specs include 100-leaf books and mixed leaf counts per lot, suggesting higher customization; and paper quality, cover weight, colour printing, and geographic spread are not captured in leaf count alone. These specification, distribution, and scale differences could plausibly explain a large portion of the gap.\"\n  }\n]",
+    "reporter": "[\n  {\n    \"leadId\": \"price-gap-federal-vs-oyo\",\n    \"challenge\": \"Federal contracts include 100-leaf books and mixed leaf counts per lot, while Oyo contracts are exclusively 60- and 80-leaf. Federal lot sizes are 8k–74k vs Oyo's 200k+ per lot, losing economies of scale. Federal contracts span 2023–2024 vs Oyo's 2022 (CPI-adjusted to 2025). Federal titles explicitly mention \\\"SUPPLY AND DISTRIBUTION\\\" or \\\"PRINTING AND SUPPLY\\\" to dispersed schools across constituencies/LGAs, while Oyo contracts appear to be bulk procurement without last-mile delivery. Paper quality, cover weight, colour printing, and geographic spread are not captured in leaf count alone. These specification, distribution, and scale differences could plausibly explain a large portion of the gap.\",\n    \"disposition\": \"downgrade\"\n  },\n  {\n    \"leadId\": \"twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613\",\n    \"challenge\": \"The two awards share the same date (2024-10-15) and quantity (8,200 books) with near-identical values (0.327% difference), but they are for different school clusters: \\\"PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED SCHOOLS IN TUDUN/S\\\" versus \\\"PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED SCHOOLS IN GALADIMAWA II\\\". These appear to be separate lots or releases for distinct geographic areas, which is a legitimate procurement explanation rather than a duplicate release.\",\n    \"disposition\": \"downgrade\"\n  }\n]"
   },
   "criticChallenges": [
     {
       "role": "classifier-critic",
       "leadId": "price-gap-federal-vs-oyo",
-      "challenge": "{\"leadId\":\"price-gap-federal-vs-oyo\",\"challenge\":\"Federal contracts span 2021–2024 with varying leaf counts (20, 40, 60, 80, 100) and explicit distribution clauses (\\\"SUPPLY AND DISTRIBUTION\\\" or \\\"PRINTING AND SUPPLY\\\"), while Oyo contracts are bulk procurement of 200k+ copies per lot from 2019–2022. Federal lot sizes are 8k–74k versus Oyo's 200k+, implying significant economies of scale for Oyo. Federal contracts include 100-leaf books and customization to specific constituencies/LGAs; Oyo contracts are state-wide with uniform 60/80-leaf specifications. CPI adjustment and leaf-count matching do not resolve these structural differences.\",\"disposition\":\"downgrade\"}"
+      "challenge": "Federal contracts include 100-leaf books and mixed leaf counts per lot, while Oyo contracts are exclusively 60- and 80-leaf. Federal lot sizes are 8k–74k vs Oyo's 200k+ per lot, losing economies of scale. Federal contracts span 2023–2024 vs Oyo's 2022 (CPI-adjusted to 2025). Federal titles explicitly mention \"SUPPLY AND DISTRIBUTION\" or \"PRINTING AND SUPPLY\" to dispersed schools across constituencies/LGAs, while Oyo contracts appear to be bulk procurement without last-mile delivery. Paper quality, cover weight, colour printing, and geographic spread are not captured in leaf count alone. These specification, distribution, and scale differences could plausibly explain a large portion of the gap.",
+      "disposition": "downgrade"
     },
     {
       "role": "classifier-critic",
       "leadId": "twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613",
-      "challenge": "{\"leadId\":\"price-gap-federal-vs-oyo\",\"disposition\":\"downgrade\",\"reason\":\"The 5.16× price gap on matched 60- and 80-leaf books persists after CPI adjustment, but several legitimate factors remain unresolved: federal contracts include explicit distribution to dispersed schools across constituencies/LGAs (titles mention \\\"SUPPLY AND DISTRIBUTION\\\" or \\\"PRINTING AND SUPPLY\\\"), while Oyo contracts appear to be bulk procurement without last-mile delivery; federal lot sizes are 8k–74k versus Oyo's 200k+ per lot, implying significant economies of scale for Oyo; federal contracts span 2021–2024 with varying specifications (some include 20/40/100 leaves, customization levels, cover weight, colour printing not captured by leaf count alone); and geographic spread differs (federal to specific constituencies, Oyo state-wide). Without detailed spec sheets, paper quality, cover GSM, printing colours, and delivery distance breakdowns, the gap cannot be attributed solely to overpricing.\"}"
-    },
-    {
-      "role": "classifier-critic",
-      "leadId": "twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613",
-      "challenge": "{\"leadId\":\"twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613\",\"disposition\":\"downgrade\",\"reason\":\"The two federal contracts on 2024-10-15 for 8,200 books each have near-identical values (difference 0.327%) and appear to be separate lots for different school clusters (Tudun/S vs Galadimawa II) with the same leaf specification [60,80,100]. The slight value difference may reflect minor specification or delivery distance variations. No evidence of duplicate release or invalid evidence; the contracts are distinguishable by location.\"}"
-    },
-    {
-      "role": "defence-critic",
-      "leadId": "price-gap-federal-vs-oyo",
-      "challenge": "A leaf-matched comparison exists for 60- and 80-leaf books (federal median ~2,953 NGN vs Oyo median ~572 NGN, ~5.2× gap). However, several legitimate factors remain unresolved: federal contracts explicitly include distribution to dispersed schools across constituencies/LGAs (titles mention \"SUPPLY AND DISTRIBUTION\" or \"PRINTING AND SUPPLY\"), while Oyo contracts appear to be bulk procurement without last-mile delivery; federal lot sizes are 8k–74k versus Oyo's 200k+ per lot, implying significant economies of scale for Oyo; federal contracts span 2021–2024 with varying specifications (some include 20/40/100 leaves, customization levels, cover weight, colour printing not captured by leaf count alone); and geographic spread differs (federal to specific constituencies, Oyo state-wide). Without detailed spec sheets, paper quality, cover GSM, printing colours, and delivery distance breakdowns, the gap cannot be attributed solely to overpricing.",
+      "challenge": "The two federal contracts share the same date (2024-10-15) and quantity (8,200) with near-identical values (0.327% difference), but they are for different school clusters: \"PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED SCHOOLS IN TUDUN/S\" versus \"PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED SCHOOLS IN GALADIMAWA II\". These appear to be separate lots or releases for distinct geographic areas, which is a legitimate procurement explanation rather than a duplicate release.",
       "disposition": "downgrade"
     },
     {
@@ -2850,7 +2841,13 @@
     {
       "role": "defence-critic",
       "leadId": "price-gap-federal-vs-oyo",
-      "challenge": "The 5.16× price gap on matched 60- and 80-leaf books persists after CPI adjustment, but several legitimate factors remain unresolved: federal contracts include explicit distribution to dispersed schools across constituencies/LGAs (titles mention \"SUPPLY AND DISTRIBUTION\" or \"PRINTING AND SUPPLY\"), while Oyo contracts appear to be bulk procurement without last-mile delivery; federal lot sizes are 8k–74k versus Oyo's 200k+ per lot, implying significant economies of scale for the state; federal contracts span 2023–2024 versus Oyo's 2022 (CPI-adjusted), during which paper and fuel costs rose sharply; and specifications such as cover weight, paper GSM, colour printing, and customization level are not captured in the leaf count alone. These specification, distribution, and scale differences could plausibly account for a large portion of the gap.",
+      "challenge": "The 5.16× price gap on matched 60- and 80-leaf books persists after CPI adjustment, but several legitimate factors remain unresolved: federal contracts include explicit distribution to dispersed schools across constituencies/LGAs (titles mention \"SUPPLY AND DISTRIBUTION\" or \"PRINTING AND SUPPLY\"), while Oyo contracts appear to be bulk procurement without last-mile delivery; federal lot sizes are 8k–74k vs Oyo's 200k+ per lot, losing economies of scale; federal contracts span 2023–2024 vs Oyo's 2022 (CPI-adjusted to 2025); federal specs include 100-leaf books and mixed leaf counts per lot, suggesting higher customization; and paper quality, cover weight, colour printing, and geographic spread are not captured in leaf count alone. These specification, distribution, and scale differences could plausibly explain a large portion of the gap.",
+      "disposition": "downgrade"
+    },
+    {
+      "role": "defence-critic",
+      "leadId": "price-gap-federal-vs-oyo",
+      "challenge": "The 5.16× price gap on matched 60- and 80-leaf books persists after CPI adjustment, but several legitimate factors remain unresolved: federal contracts include explicit distribution to dispersed schools across constituencies/LGAs (titles mention \"SUPPLY AND DISTRIBUTION\" or \"PRINTING AND SUPPLY\"), while Oyo contracts appear to be bulk procurement without last-mile delivery; federal lot sizes are 8k–74k vs Oyo's 200k+ per lot, losing economies of scale; federal contracts span 2023–2024 vs Oyo's 2022 (CPI-adjusted to 2025); federal specs include 100-leaf books and mixed leaf counts per lot, suggesting higher customization; and paper quality, cover weight, colour printing, and geographic spread are not captured in leaf count alone. These specification, distribution, and scale differences could plausibly explain a large portion of the gap.",
       "disposition": "downgrade"
     }
   ],
@@ -2876,7 +2873,7 @@
     {
       "leadId": "price-gap-federal-vs-oyo",
       "disposition": "downgrade",
-      "reason": "The 5.16× price gap on matched 60- and 80-leaf books persists after CPI adjustment, but several legitimate factors remain unresolved: federal contracts include explicit distribution to dispersed schools across constituencies/LGAs (titles mention \"SUPPLY AND DISTRIBUTION\" or \"PRINTING AND SUPPLY\"), while Oyo contracts appear to be bulk procurement without last-mile delivery; federal lot sizes are 8k–74k versus Oyo's 200k+ per lot, implying significant economies of scale for the state; federal contracts span 2023–2024 versus Oyo's 2022 (CPI-adjusted), during which paper and fuel costs rose sharply; and specifications such as cover weight, paper GSM, colour printing, and customization level are not captured in the leaf count alone. These specification, distribution, and scale differences could plausibly account for a large portion of the gap.",
+      "reason": "The 5.16× price gap on matched 60- and 80-leaf books persists after CPI adjustment, but several legitimate factors remain unresolved: federal contracts include explicit distribution to dispersed schools across constituencies/LGAs (titles mention \"SUPPLY AND DISTRIBUTION\" or \"PRINTING AND SUPPLY\"), while Oyo contracts appear to be bulk procurement without last-mile delivery; federal lot sizes are 8k–74k vs Oyo's 200k+ per lot, losing economies of scale; federal contracts span 2023–2024 vs Oyo's 2022 (CPI-adjusted to 2025); federal specs include 100-leaf books and mixed leaf counts per lot, suggesting higher customization; and paper quality, cover weight, colour printing, and geographic spread are not captured in leaf count alone. These specification, distribution, and scale differences could plausibly explain a large portion of the gap.",
       "before": "high",
       "after": "medium"
     },
@@ -2894,7 +2891,7 @@
     {
       "leadId": "twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613",
       "memoryId": "mem-3",
-      "reason": "Separate constituency lots with different school clusters should be checked before treating this as duplicate."
+      "reason": "rerun"
     }
   ],
   "finalLeads": [
@@ -2985,7 +2982,7 @@
     {
       "leadId": "twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613",
       "memoryId": "mem-3",
-      "content": "lead:twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613 dismissed: Separate constituency lots with different school clusters should be checked before treating this as duplicate."
+      "content": "lead:twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613 dismissed: rerun"
     }
   ],
   "memoryWrites": [],
@@ -3079,7 +3076,7 @@
     "ratio": 5.162777763317825,
     "targetYear": 2025
   },
-  "reporterOutput": "[\n  {\n    \"leadId\": \"price-gap-federal-vs-oyo\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"The 5.16× price gap on matched 60- and 80-leaf books persists after CPI adjustment, but several legitimate factors remain unresolved: federal contracts include explicit distribution to dispersed schools across constituencies/LGAs (titles mention \\\"SUPPLY AND DISTRIBUTION\\\" or \\\"PRINTING AND SUPPLY\\\"), while Oyo contracts appear to be bulk procurement without last-mile delivery; federal lot sizes are 8k–74k versus Oyo's 200k+ per lot, implying significant economies of scale for Oyo; federal contracts span 2023–2024 versus Oyo's 2022 (CPI-adjusted), during which paper and fuel costs rose sharply; and specifications such as cover weight, paper GSM, colour printing, and customization level are not captured in the leaf count alone. These specification, distribution, and scale differences could plausibly account for a large portion of the gap.\"\n  },\n  {\n    \"leadId\": \"twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613\",\n    \"disposition\": \"downgrade\",\n    \"reason\": \"The two awards share the same date (2024-10-15) and quantity (8,200 books) with near-identical unit prices (~2,953–2,963 NGN/book), but their titles reference different locations (\\\"TUDUN/S\\\" vs \\\"GALADIMAWA II\\\"). This is consistent with separate lots for distinct school clusters or wards within a constituency, each tendered or awarded in parallel. The 0.33% value difference falls within normal rounding or minor spec variance (e.g., cover weight, delivery distance). No evidence suggests duplicate payment or a single contract split improperly.\"\n  }\n]",
+  "reporterOutput": "[\n  {\n    \"leadId\": \"price-gap-federal-vs-oyo\",\n    \"challenge\": \"Federal contracts include 100-leaf books and mixed leaf counts per lot, while Oyo contracts are exclusively 60- and 80-leaf. Federal lot sizes are 8k–74k vs Oyo's 200k+ per lot, losing economies of scale. Federal contracts span 2023–2024 vs Oyo's 2022 (CPI-adjusted to 2025). Federal titles explicitly mention \\\"SUPPLY AND DISTRIBUTION\\\" or \\\"PRINTING AND SUPPLY\\\" to dispersed schools across constituencies/LGAs, while Oyo contracts appear to be bulk procurement without last-mile delivery. Paper quality, cover weight, colour printing, and geographic spread are not captured in leaf count alone. These specification, distribution, and scale differences could plausibly explain a large portion of the gap.\",\n    \"disposition\": \"downgrade\"\n  },\n  {\n    \"leadId\": \"twin-award-ocds-gyl66f-539001003-002244/17018-ocds-gyl66f-539001003-002381/15613\",\n    \"challenge\": \"The two awards share the same date (2024-10-15) and quantity (8,200 books) with near-identical values (0.327% difference), but they are for different school clusters: \\\"PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED SCHOOLS IN TUDUN/S\\\" versus \\\"PRINTING AND SUPPLY OF EXERCISE BOOKS TO SELECTED SCHOOLS IN GALADIMAWA II\\\". These appear to be separate lots or releases for distinct geographic areas, which is a legitimate procurement explanation rather than a duplicate release.\",\n    \"disposition\": \"downgrade\"\n  }\n]",
   "reporterModel": "nvidia/nemotron-3.5-lightning-30b-a3b",
-  "totalRunMs": 88990
+  "totalRunMs": 49468
 }
