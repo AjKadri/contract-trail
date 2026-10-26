@@ -33,6 +33,7 @@ export type OyoContract = {
 };
 
 export type CpiPoint = { year: number; value: number };
+export const CPI_BASE_YEAR = 2025;
 export type LeafCount = 20 | 40 | 60 | 80 | 100;
 
 export type LeafPricedRow = {
@@ -172,7 +173,7 @@ export function deflatePrice(nominalPrice: number, sourceYear: number, cpi: CpiP
   const usable = cpi.filter((point) => point.year > 0 && point.value > 0).sort((a, b) => a.year - b.year);
   if (usable.length === 0 || sourceYear <= 0) return { value: nominalPrice, targetYear: sourceYear };
   const source = usable.find((point) => point.year === sourceYear) ?? usable.reduce((a, b) => Math.abs(b.year - sourceYear) < Math.abs(a.year - sourceYear) ? b : a);
-  const target = usable[usable.length - 1];
+  const target = usable.find((point) => point.year === CPI_BASE_YEAR) ?? usable[usable.length - 1];
   return { value: nominalPrice * target.value / source.value, targetYear: target.year };
 }
 

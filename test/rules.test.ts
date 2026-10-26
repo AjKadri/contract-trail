@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyLeadDispositions,
   buildLeafMatchedComparison,
+  CPI_BASE_YEAR,
   deflatePrice,
   federalItemsToPriced,
   federalToLeafPrices,
@@ -75,7 +76,8 @@ describe("M3 deterministic procurement rules", () => {
     expect(priced[0].evidenceId).toBe("ocds-test-1/1");
   });
 
-  it("deflates nominal prices to the latest CPI year", () => {
+  it("deflates nominal prices to the 2025 CPI base year", () => {
+    expect(CPI_BASE_YEAR).toBe(2025);
     expect(deflatePrice(10, 2023, cpi)).toEqual({ value: 12, targetYear: 2025 });
   });
 

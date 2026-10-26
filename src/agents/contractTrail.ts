@@ -13,6 +13,7 @@ import {
   applyLeadDispositions,
   buildDeterministicLeads,
   buildLeafMatchedComparison,
+  CPI_BASE_YEAR,
   federalItemsToPriced,
   federalToLeafPrices,
   numberValue,
@@ -142,7 +143,7 @@ async function callAndRecord(trace: RunTrace, options: CallOptions, onEvent?: (e
   }
 }
 
-function planFallback(): Record<string, unknown> { return { steps: ["Find federal exercise-book purchases", "Find Oyo exercise-book purchases", "Use CPI and deterministic price rules", "Check twin awards and ask critics to challenge each lead"] }; }
+function planFallback(): Record<string, unknown> { return { steps: ["Find federal exercise-book purchases", "Find Oyo exercise-book purchases", `Use CPI base year ${CPI_BASE_YEAR} and deterministic price rules`, "Check twin awards and ask critics to challenge each lead"] }; }
 
 function selectedToolsFrom(content: string): QueryToolName[] {
   const value = parseJsonObject(content).tools;
@@ -316,8 +317,8 @@ export async function runContractTrail(question = DEFAULT_QUESTION, options: Run
   const emit = options.onEvent;
   try {
     const planner = await callAndRecord(trace, { role: "planner", model: deepModel(), fallbackModel: fastModel(), maxTokens: 4096, chatTemplateKwargs: THINKING_OFF, messages: [
-      { role: "system", content: "You are the Contract Trail planner. detailed thinking off. Do not compute numbers or decide matches. Return JSON with steps and a tools array containing only typed tool names needed for the question." },
-      { role: "user", content: `Question: ${question}\nTools: ${toolNameList().join(", ")}\nPlan federal/Oyo price comparison, CPI, and twin-award check. A leaf-matched follow-up is critic-only.` },
+      { role: "system", content: `You are the Contract Trail planner. detailed thinking off. The CPI base year is ${CPI_BASE_YEAR}. Do not compute numbers or decide matches. Return JSON with steps and a tools array containing only typed tool names needed for the question.` },
+      { role: "user", content: `Question: ${question}\nTools: ${toolNameList().join(", ")}\nPlan federal/Oyo price comparison in ${CPI_BASE_YEAR} CPI terms, plus the twin-award check. A leaf-matched follow-up is critic-only.` },
     ] }, emit);
     trace.plan = parseJsonObject(planner.content);
     if (Object.keys(trace.plan as Record<string, unknown>).length === 0) trace.plan = planFallback();
