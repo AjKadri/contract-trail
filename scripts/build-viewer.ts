@@ -16,7 +16,7 @@ type RecordedTrace = {
 
 rmSync(outputDir, { recursive: true, force: true });
 mkdirSync(traceOutputDir, { recursive: true });
-for (const file of ["index.html", "viewer.js", "viewer.css"]) copyFileSync(join(sourceDir, file), join(outputDir, file));
+for (const file of ["index.html", "viewer.js", "viewer.css", "favicon.svg"]) copyFileSync(join(sourceDir, file), join(outputDir, file));
 
 const curatedNames = readFileSync(join(runsDir, "README.md"), "utf8").match(/^- `([^`]+\.json)`$/gmu)?.map((line) => line.slice(3, -1)) ?? [];
 const traces = readdirSync(runsDir)
