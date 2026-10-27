@@ -11,5 +11,5 @@ console.log(`[demo] REPLAYED trace=${basename(result.tracePath)}`);
 console.log(`[demo] question=${result.trace.question}`);
 console.log(`[demo] saved_rows=${savedRows} tool_calls=${result.trace.toolCalls.length} model_outputs=${Object.keys(result.trace.modelOutputs).length}`);
 console.log(`[demo] model_ids=${modelIds.join(", ")}`);
-console.log(`[demo] leads=${result.leads.length} withdrawn=${result.withdrawnLeads.length} superseded=${result.supersededLeads.length}`);
+console.log(`[demo] leads=${result.leads.length} superseded=${result.supersededLeads.length} withdrawn=${result.withdrawnLeads.length}`);
 for (const lead of result.leads) console.log(`[demo] lead=${lead.id} severity=${lead.severity}`);

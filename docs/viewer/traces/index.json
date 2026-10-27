@@ -1,55 +1,23 @@
 [
   {
     "file": "2026-10-25T13-55-53-386Z-are-the-exercise-book-contracts-in-federal-const.json",
+    "label": "first run: price gap + twin award",
     "date": "2026-10-25",
     "time": "13:55:03",
     "durationMs": 49913,
     "leads": 2
   },
   {
-    "file": "2026-10-25T14-01-45-223Z-are-the-exercise-book-contracts-in-federal-const.json",
-    "date": "2026-10-25",
-    "time": "14:00:15",
-    "durationMs": 90056,
-    "leads": 2
-  },
-  {
-    "file": "2026-10-25T14-04-17-406Z-are-the-exercise-book-contracts-in-federal-const.json",
-    "date": "2026-10-25",
-    "time": "14:02:40",
-    "durationMs": 96735,
-    "leads": 1
-  },
-  {
-    "file": "2026-10-25T14-07-54-186Z-are-the-exercise-book-contracts-in-federal-const.json",
-    "date": "2026-10-25",
-    "time": "14:07:02",
-    "durationMs": 51197,
-    "leads": 2
-  },
-  {
     "file": "2026-10-25T14-10-37-293Z-are-the-exercise-book-contracts-in-federal-const.json",
+    "label": "memory: twin superseded",
     "date": "2026-10-25",
     "time": "14:09:08",
     "durationMs": 88990,
     "leads": 1
   },
   {
-    "file": "2026-10-26T09-51-57-644Z-are-the-exercise-book-contracts-in-federal-const.json",
-    "date": "2026-10-26",
-    "time": "09:51:08",
-    "durationMs": 49468,
-    "leads": 1
-  },
-  {
-    "file": "2026-10-26T20-01-55-382Z-are-the-exercise-book-contracts-in-federal-const.json",
-    "date": "2026-10-26",
-    "time": "20:01:04",
-    "durationMs": 51288,
-    "leads": 1
-  },
-  {
     "file": "2026-10-26T20-02-52-561Z-which-suppliers-won-contracts-from-both-the-fede.json",
+    "label": "cross-publisher suppliers",
     "date": "2026-10-26",
     "time": "20:02:07",
     "durationMs": 44738,
@@ -57,9 +25,50 @@
   },
   {
     "file": "2026-10-26T20-03-21-074Z-are-any-federal-exercise-book-awards-suspiciousl.json",
+    "label": "similar federal awards",
     "date": "2026-10-26",
     "time": "20:03:01",
     "durationMs": 19906,
     "leads": 0
+  },
+  {
+    "file": "2026-10-25T14-01-45-223Z-are-the-exercise-book-contracts-in-federal-const.json",
+    "label": "2026-10-25 14:00:15 UTC · 90.1 s · 2 leads",
+    "date": "2026-10-25",
+    "time": "14:00:15",
+    "durationMs": 90056,
+    "leads": 2
+  },
+  {
+    "file": "2026-10-25T14-04-17-406Z-are-the-exercise-book-contracts-in-federal-const.json",
+    "label": "2026-10-25 14:02:40 UTC · 96.7 s · 1 leads",
+    "date": "2026-10-25",
+    "time": "14:02:40",
+    "durationMs": 96735,
+    "leads": 1
+  },
+  {
+    "file": "2026-10-25T14-07-54-186Z-are-the-exercise-book-contracts-in-federal-const.json",
+    "label": "2026-10-25 14:07:02 UTC · 51.2 s · 2 leads",
+    "date": "2026-10-25",
+    "time": "14:07:02",
+    "durationMs": 51197,
+    "leads": 2
+  },
+  {
+    "file": "2026-10-26T09-51-57-644Z-are-the-exercise-book-contracts-in-federal-const.json",
+    "label": "2026-10-26 09:51:08 UTC · 49.5 s · 1 leads",
+    "date": "2026-10-26",
+    "time": "09:51:08",
+    "durationMs": 49468,
+    "leads": 1
+  },
+  {
+    "file": "2026-10-26T20-01-55-382Z-are-the-exercise-book-contracts-in-federal-const.json",
+    "label": "2026-10-26 20:01:04 UTC · 51.3 s · 1 leads",
+    "date": "2026-10-26",
+    "time": "20:01:04",
+    "durationMs": 51288,
+    "leads": 1
   }
 ]

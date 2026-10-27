@@ -7,16 +7,16 @@ NET=$(docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{en
 echo "Zetaris api container: $API  network: $NET"
 python3 make_load_sql.py
 docker rm -f ct-pg >/dev/null 2>&1 || true
-docker run -d --name ct-pg --network "$NET" -e POSTGRES_PASSWORD=spikepass -v "$PWD/data":/data:ro postgres:16-alpine >/dev/null
+docker run -d --name ct-pg --network "$NET" -e POSTGRES_PASSWORD="${CT_PG_PASSWORD:?set CT_PG_PASSWORD}" -v "$PWD/data":/data:ro postgres:16-alpine >/dev/null
 echo -n "waiting for postgres"; sleep 3; until docker exec ct-pg psql -U postgres -tAc "select 1" 2>/dev/null | grep -q 1; do echo -n .; sleep 2; done; sleep 2; echo " ready"
 docker exec ct-pg psql -U postgres -qc "CREATE DATABASE bpp;" -c "CREATE DATABASE states;"
 docker exec ct-pg psql -U postgres -d bpp -q -f /data/load_bpp.sql
 docker exec ct-pg psql -U postgres -d states -q -f /data/load_states.sql
 source ../.venv/bin/activate
 python zsql.py \
- "CREATE DATASOURCE bpp_pg DESCRIBE BY 'BPP federal OCDS' OPTIONS (jdbcdriver 'org.postgresql.Driver', jdbcurl 'jdbc:postgresql://ct-pg:5432/bpp', username 'postgres', password 'spikepass', fetchsize '1000')" \
+ "CREATE DATASOURCE bpp_pg DESCRIBE BY 'BPP federal OCDS' OPTIONS (jdbcdriver 'org.postgresql.Driver', jdbcurl 'jdbc:postgresql://ct-pg:5432/bpp', username 'postgres', password '${CT_PG_PASSWORD:?set CT_PG_PASSWORD}', fetchsize '1000')" \
  "REGISTER DATASOURCE TABLES FROM bpp_pg" \
- "CREATE DATASOURCE states_pg DESCRIBE BY 'Osun and Oyo OCDS' OPTIONS (jdbcdriver 'org.postgresql.Driver', jdbcurl 'jdbc:postgresql://ct-pg:5432/states', username 'postgres', password 'spikepass', fetchsize '1000')" \
+ "CREATE DATASOURCE states_pg DESCRIBE BY 'Osun and Oyo OCDS' OPTIONS (jdbcdriver 'org.postgresql.Driver', jdbcurl 'jdbc:postgresql://ct-pg:5432/states', username 'postgres', password '${CT_PG_PASSWORD:?set CT_PG_PASSWORD}', fetchsize '1000')" \
  "REGISTER DATASOURCE TABLES FROM states_pg" \
  "SHOW DATASOURCE TABLES bpp_pg" \
  "SHOW DATASOURCE TABLES states_pg" \

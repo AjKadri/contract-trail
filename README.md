@@ -52,6 +52,9 @@ See **[docs/SPONSORS.md](docs/SPONSORS.md)** for exact calls. In short:
 - Vite 7.3.7, MIT.
 - Vitest 5.0.5, MIT.
 
+## Security
+An early commit contains the password of a local-only development Postgres container. It has been rotated; the old value grants no access.
+
 ## Pre-existing components
 None of the application code existed before the event. It was built from 24-27
 October 2026.
@@ -79,15 +82,16 @@ From a fresh clone:
 git clone https://github.com/AjKadri/contract-trail.git && cd contract-trail
 npm ci
 ```
-Expected: `[demo] REPLAYED … saved_rows=239 tool_calls=6 … lead=price-gap-federal-vs-oyo severity=medium`.
+Expected: `[demo] REPLAYED … saved_rows=239 tool_calls=6 … leads=2 superseded=0`.
 
 - **Run records:** [`runs/`](runs/) holds 9 curated real live sessions. Each includes the SQL text, row counts, timings, model IDs, critic challenges and disposition changes.
 - **Verify any number:** every evidence ID links to its record on data.open-contracting.org, and every lead shows its arithmetic.
 
 ## Sample inputs and outputs
-- **Are the exercise-book contracts in federal constituency projects priced fairly compared with what states pay?** The live run returned one active, defence-downgraded price-gap lead: 5.16× federal versus Oyo median price per book on matched 60- and 80-leaf books, expressed in 2025 CPI terms. Trace: `2026-10-26T20-01-55-382Z-are-the-exercise-book-contracts-in-federal-const.json`.
-- **Which suppliers won contracts from both the federal government and Osun?** The live run returned 7 overlap matches: SYMROYAL INTEGRATED NIGERIA LIMITED, TAMGAJ CORPORATE SERVICES LTD, SALFAT ULTIMATE SYNERGY LTD, JOELF BUILDERS GLOBAL CONCEPTS LTD, RAREGEODE COMPANY LIMITED, LARBOL SMART CHOICE LIMITED, and TERA PICO VENTURE. Trace: `2026-10-26T20-02-52-561Z-which-suppliers-won-contracts-from-both-the-fede.json`.
-- **Are any federal exercise-book awards suspiciously similar to each other?** The live run found no new similarity lead and confirmed the existing twin-award pair as downgraded to low after the defence review. Trace: `2026-10-26T20-03-21-074Z-are-any-federal-exercise-book-awards-suspiciousl.json`.
+- **First run, “Are the exercise-book contracts in federal constituency projects priced fairly compared with what states pay?”** Two active leads: the price gap was downgraded HIGH → MEDIUM after the critic requested `getLeafMatchedComparison`, and the twin-award lead remained active at LOW. Trace: `2026-10-25T13-55-53-386Z-are-the-exercise-book-contracts-in-federal-const.json`.
+- **Rerun after dismissal, same question.** The price-gap lead remains, while the twin-award lead is superseded by the H-MEM decision. Trace: `2026-10-25T14-10-37-293Z-are-the-exercise-book-contracts-in-federal-const.json`.
+- **“Which suppliers won contracts from both the federal government and Osun?”** The live run returned 7 overlap matches: SYMROYAL INTEGRATED NIGERIA LIMITED, TAMGAJ CORPORATE SERVICES LTD, SALFAT ULTIMATE SYNERGY LTD, JOELF BUILDERS GLOBAL CONCEPTS LTD, RAREGEODE COMPANY LIMITED, LARBOL SMART CHOICE LIMITED, and TERA PICO VENTURE. Trace: `2026-10-26T20-02-52-561Z-which-suppliers-won-contracts-from-both-the-fede.json`.
+- **“Are any federal exercise-book awards suspiciously similar to each other?”** The live run found no new similarity lead and confirmed the existing twin-award pair as downgraded to low after the defence review. Trace: `2026-10-26T20-03-21-074Z-are-any-federal-exercise-book-awards-suspiciousl.json`.
 - The separately curated 49.468-second exercise-book run remains in the proof pack at `2026-10-26T09-51-57-644Z-are-the-exercise-book-contracts-in-federal-const.json`.
 
 **Full live setup** (needs Zetaris, which requires registration, and Nightshift, on your machine): see [docs/SETUP.md](docs/SETUP.md).

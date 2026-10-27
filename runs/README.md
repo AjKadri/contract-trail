@@ -3,19 +3,19 @@
 The nine top-level JSON files are the curated proof pack from agent version 2.
 They are real `LIVE` sessions, have all model calls at `status=ok`, contain no
 retry calls, and finish in under 120 seconds. The static viewer reads only the
-top-level curated records. The latest one is also bundled as the default sample.
+top-level curated records. The first run is also bundled as the default sample.
 
 ## Curated proof pack
 
-- `2026-10-25T13-55-53-386Z-are-the-exercise-book-contracts-in-federal-const.json`
+- `2026-10-25T13-55-53-386Z-are-the-exercise-book-contracts-in-federal-const.json` — first run: price gap + twin award
+- `2026-10-25T14-10-37-293Z-are-the-exercise-book-contracts-in-federal-const.json` — memory: twin superseded
+- `2026-10-26T20-02-52-561Z-which-suppliers-won-contracts-from-both-the-fede.json` — cross-publisher suppliers
+- `2026-10-26T20-03-21-074Z-are-any-federal-exercise-book-awards-suspiciousl.json` — similar federal awards
 - `2026-10-25T14-01-45-223Z-are-the-exercise-book-contracts-in-federal-const.json`
 - `2026-10-25T14-04-17-406Z-are-the-exercise-book-contracts-in-federal-const.json`
 - `2026-10-25T14-07-54-186Z-are-the-exercise-book-contracts-in-federal-const.json`
-- `2026-10-25T14-10-37-293Z-are-the-exercise-book-contracts-in-federal-const.json`
 - `2026-10-26T09-51-57-644Z-are-the-exercise-book-contracts-in-federal-const.json`
 - `2026-10-26T20-01-55-382Z-are-the-exercise-book-contracts-in-federal-const.json`
-- `2026-10-26T20-02-52-561Z-which-suppliers-won-contracts-from-both-the-fede.json`
-- `2026-10-26T20-03-21-074Z-are-any-federal-exercise-book-awards-suspiciousl.json`
 
 ## Development history
 

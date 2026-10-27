@@ -17,7 +17,7 @@ const shortModel = (value) => {
 };
 const formatDuration = (milliseconds) => milliseconds == null ? "in progress" : milliseconds < 1000 ? `${milliseconds} ms` : `${(milliseconds / 1000).toFixed(1)} s`;
 const catalogFile = (entry) => typeof entry === "string" ? entry : entry.file;
-const catalogLabel = (entry) => typeof entry === "string" ? entry : `${entry.date} ${entry.time} UTC · ${formatDuration(entry.durationMs)} · ${entry.leads} leads`;
+const catalogLabel = (entry) => typeof entry === "string" ? entry : entry.label || `${entry.date} ${entry.time} UTC · ${formatDuration(entry.durationMs)} · ${entry.leads} leads`;
 const shortLeadId = (value) => {
   if (value === "price-gap-federal-vs-oyo") return "price-gap";
   if (typeof value === "string" && value.startsWith("twin-award-")) return "twin-award";

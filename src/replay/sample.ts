@@ -7,7 +7,17 @@ import type { RunResult, RunTrace, TraceEvent } from "../agents/contractTrail.js
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
+export const DEFAULT_REPLAY_FILENAME = "2026-10-25T13-55-53-386Z-are-the-exercise-book-contracts-in-federal-const.json";
+export const TRACE_LABELS: Record<string, string> = {
+  [DEFAULT_REPLAY_FILENAME]: "first run: price gap + twin award",
+  "2026-10-25T14-10-37-293Z-are-the-exercise-book-contracts-in-federal-const.json": "memory: twin superseded",
+  "2026-10-26T20-02-52-561Z-which-suppliers-won-contracts-from-both-the-fede.json": "cross-publisher suppliers",
+  "2026-10-26T20-03-21-074Z-are-any-federal-exercise-book-awards-suspiciousl.json": "similar federal awards",
+};
+
 export function findRecordedTrace(runsDir = join(ROOT, "runs")): string {
+  const preferred = join(runsDir, DEFAULT_REPLAY_FILENAME);
+  if (existsSync(preferred)) return preferred;
   const candidates = readdirSync(runsDir)
     .filter((file) => file.endsWith(".json") && file.includes("-are-the-exercise-book-contracts-in-federal-const"))
     .filter((file) => !file.startsWith("probe-"))
