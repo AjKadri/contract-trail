@@ -64,8 +64,9 @@ Built on:
 - Zetaris.
 - Meterless Nightshift.
 - The Meterless H-MEM specification and conformance suite, Apache-2.0. The
-  repository contains no vendored Meterless files. A local vendor/meterless/
-  checkout is gitignored and used only for conformance.
+  repository tracks the three upstream reference smoke suites and the minimal
+  reference sources they exercise for offline test parity. The rest of the
+  local vendor/meterless/ checkout is gitignored and used only for conformance.
 - NVIDIA Nemotron.
 - The Open Contracting Data Standard.
 

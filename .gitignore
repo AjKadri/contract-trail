@@ -14,6 +14,42 @@ runs/.hmem/
 # Internal research and strategy notes (not for the public repo)
 research/
 .DS_Store
-vendor/
+vendor/*
+!vendor/meterless/
+vendor/meterless/*
+!vendor/meterless/engines/
+vendor/meterless/engines/*
+
+# Keep the three upstream reference smoke suites and their minimal sources
+# tracked so npm test has the same offline coverage in a fresh clone.
+!vendor/meterless/engines/hmem/
+vendor/meterless/engines/hmem/*
+!vendor/meterless/engines/hmem/LICENSE
+!vendor/meterless/engines/hmem/reference/
+vendor/meterless/engines/hmem/reference/*
+!vendor/meterless/engines/hmem/reference/src/
+!vendor/meterless/engines/hmem/reference/src/*.ts
+!vendor/meterless/engines/hmem/reference/test/
+!vendor/meterless/engines/hmem/reference/test/smoke.test.ts
+
+!vendor/meterless/engines/markovian/
+vendor/meterless/engines/markovian/*
+!vendor/meterless/engines/markovian/LICENSE
+!vendor/meterless/engines/markovian/reference/
+vendor/meterless/engines/markovian/reference/*
+!vendor/meterless/engines/markovian/reference/src/
+!vendor/meterless/engines/markovian/reference/src/*.ts
+!vendor/meterless/engines/markovian/reference/test/
+!vendor/meterless/engines/markovian/reference/test/smoke.test.ts
+
+!vendor/meterless/engines/world-model/
+vendor/meterless/engines/world-model/*
+!vendor/meterless/engines/world-model/LICENSE
+!vendor/meterless/engines/world-model/reference/
+vendor/meterless/engines/world-model/reference/*
+!vendor/meterless/engines/world-model/reference/src/
+!vendor/meterless/engines/world-model/reference/src/*.ts
+!vendor/meterless/engines/world-model/reference/test/
+!vendor/meterless/engines/world-model/reference/test/smoke.test.ts
 node_modules/
 dist/
