@@ -70,19 +70,19 @@ Built on:
 - The Open Contracting Data Standard.
 
 ## Check it yourself
-**No setup (replayed real run):**
-
-**First, replay the included trace after installing dependencies:**
 ```sh
+git clone https://github.com/AjKadri/contract-trail.git
+cd contract-trail
+npm ci
 SAMPLE_MODE=true npm run demo      # REPLAYED: real recorded Zetaris rows and Nemotron outputs, no services or keys
 ```
-
-From a fresh clone:
-```sh
-git clone https://github.com/AjKadri/contract-trail.git && cd contract-trail
-npm ci
-```
 Expected: `[demo] REPLAYED … saved_rows=239 tool_calls=6 … leads=2 superseded=0`.
+
+For live mode, use the full [live setup](docs/SETUP.md), including the H-MEM
+conformance run:
+```sh
+npm run conformance:hmem
+```
 
 - **Run records:** [`runs/`](runs/) holds 9 curated real live sessions. Each includes the SQL text, row counts, timings, model IDs, critic challenges and disposition changes.
 - **Verify any number:** every evidence ID links to its record on data.open-contracting.org, and every lead shows its arithmetic.
