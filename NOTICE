@@ -15,8 +15,20 @@ terms:
 * PostgreSQL 16.
 * Node.js 24.
 * The Meterless H-MEM specification and conformance suite, Apache-2.0.
-  No Meterless files are committed to this repository. A local, gitignored
-  checkout is used for conformance.
+  This repository includes three Meterless reference smoke suites (H-MEM,
+  Markovian, World Model) and the minimal reference sources they exercise,
+  copied unmodified from [https://github.com/Meterless/Meterless](https://github.com/Meterless/Meterless)
+  under Apache-2.0, with their licence files. The committed paths are
+  `vendor/meterless/engines/hmem/reference/test/smoke.test.ts` and
+  `vendor/meterless/engines/hmem/reference/src/`,
+  `vendor/meterless/engines/markovian/reference/test/smoke.test.ts` and
+  `vendor/meterless/engines/markovian/reference/src/`, and
+  `vendor/meterless/engines/world-model/reference/test/smoke.test.ts` and
+  `vendor/meterless/engines/world-model/reference/src/`, with licence files at
+  `vendor/meterless/engines/hmem/LICENSE`,
+  `vendor/meterless/engines/markovian/LICENSE`, and
+  `vendor/meterless/engines/world-model/LICENSE`. The rest of the upstream
+  checkout is gitignored and used only for the H-MEM conformance run.
 * The Open Contracting Data Standard.
 * Procurement datasets from the Nigeria Bureau of Public Procurement, Osun
   State, and Oyo State, under the publisher licences documented in README.md.
